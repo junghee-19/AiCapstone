@@ -418,16 +418,21 @@ async def auto_inspect_status() -> dict[str, Any]:
 async def _auto_inspect_loop() -> None:
     """
     자동 연속 검사 백그라운드 루프.
-    _auto_running 이 False가 될 때까지 interval마다 검사를 실행합니다.
+    라이브 프레임에서 PCB가 보일 때만 본검사를 수행합니다.
     """
     global _auto_running
+    idle_poll_seconds = 0.5
     while _auto_running:
         try:
-            from main import run_inspection_pipeline
-            logger.info("[자동검사] 검사 실행 중...")
-            await asyncio.get_event_loop().run_in_executor(None, run_inspection_pipeline)
+            from main import run_inspection_pipeline_when_pcb_present
+            logger.info("[자동검사] PCB 감시 중...")
+            performed = await asyncio.to_thread(run_inspection_pipeline_when_pcb_present)
+            if performed:
+                logger.info("[자동검사] 검사 완료 — 다음 감시까지 %.1f초 대기", _auto_interval)
+                await asyncio.sleep(_auto_interval)
+                continue
         except Exception as e:
             logger.error("[자동검사] 파이프라인 오류: %s", e)
 
         if _auto_running:
-            await asyncio.sleep(_auto_interval)
+            await asyncio.sleep(idle_poll_seconds)

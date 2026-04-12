@@ -126,6 +126,8 @@ public class InspectionController {
      *   "totalCount": 350,
      *   "passCount": 320,
      *   "failCount": 30,
+     *   "skippedCount": 8,
+     *   "inspectedCount": 350,
      *   "failRate": 8.57
      * }
      *
@@ -135,6 +137,23 @@ public class InspectionController {
     public ResponseEntity<Map<String, Object>> getStatsSummary() {
         log.debug("[GET /api/inspections/stats] 통계 조회");
         return ResponseEntity.ok(inspectionService.getStatsSummary());
+    }
+
+    /**
+     * 기간 단위 오류율 추이 조회
+     *
+     * <p>GET /api/inspections/stats/fail-rate-trend?groupBy=month&periods=6
+     *
+     * @param groupBy week 또는 month
+     * @param periods 최근 구간 수
+     * @return 200 OK + 기간별 오류율 추이
+     */
+    @GetMapping("/stats/fail-rate-trend")
+    public ResponseEntity<List<Map<String, Object>>> getFailRateTrend(
+            @RequestParam(defaultValue = "month") String groupBy,
+            @RequestParam(defaultValue = "6") @Min(1) int periods) {
+        log.debug("[GET /api/inspections/stats/fail-rate-trend] groupBy={}, periods={}", groupBy, periods);
+        return ResponseEntity.ok(inspectionService.getFailRateTrend(groupBy, periods));
     }
 
     /**

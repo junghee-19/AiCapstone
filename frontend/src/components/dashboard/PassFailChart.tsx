@@ -97,15 +97,15 @@ export default function PassFailChart() {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={248}>
+      <ResponsiveContainer width="100%" height={232}>
         <PieChart>
           <Pie
             data={pieData}
             cx="50%"
-            cy="50%"
+            cy="46%"
             /* innerRadius > 0 → 도넛(Donut) 형태 */
-            innerRadius={72}
-            outerRadius={100}
+            innerRadius={60}
+            outerRadius={80}
             paddingAngle={3}
             dataKey="value"
             /* 중앙 레이블: 커스텀 SVG 컴포넌트 */
@@ -125,6 +125,7 @@ export default function PassFailChart() {
           <Legend
             verticalAlign="bottom"
             iconType="circle"
+            wrapperStyle={{ paddingTop: '6px' }}
             formatter={(value) => (
               <span style={{ color: '#cbd5e1', fontSize: '0.75rem' }}>{value}</span>
             )}

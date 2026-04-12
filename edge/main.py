@@ -78,6 +78,18 @@ def _fiducial_confidences(alignment: AlignmentResult) -> tuple[Optional[float], 
     return f1, f2
 
 
+def _save_frame(frame: np.ndarray, save_dir: Optional[Path] = None) -> str:
+    """메모리 프레임을 captures 아래에 저장하고 절대 경로를 반환한다."""
+    base = save_dir if save_dir is not None else CAPTURES_DIR
+    base.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    file_path = base / f"{timestamp}.jpg"
+    cv2.imwrite(str(file_path), frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    logger.info("[카메라] 이미지 저장: %s", file_path)
+    return str(file_path)
+
+
 # ── 전역 싱글턴 객체 (앱 수명 주기 동안 유지) ─────────────────────────────────
 camera:           Optional[CameraCapture] = None
 detector:         Optional[YoloDetector]  = None  # 단일 모델 모드
@@ -253,6 +265,9 @@ def _run_production_vision_pipeline(
     pipeline_start: float,
     *,
     debug_imshow: bool = False,
+    fiducials_precomputed=None,
+    fiducial_ms_precomputed: Optional[int] = None,
+    alignment_precomputed: Optional[AlignmentResult] = None,
 ) -> Optional[InspectionPacket]:
     """카메라/파일 공통 — Stage 1·2 및 전송."""
     try:
@@ -261,10 +276,16 @@ def _run_production_vision_pipeline(
             cv2.waitKey(1)
 
         # STEP 2-A: Stage 1 — 피듀셜 마크 탐지 및 정렬 검사
-        logger.info("[파이프라인] STEP 2-A — 피듀셜 마크 탐지")
-        stage1 = fiducial_detector if settings.USE_SEPARATE_MODELS else detector
-        fiducials, fiducial_ms = stage1.detect_fiducials(frame)
-        alignment = compute_alignment(fiducials)
+        if fiducials_precomputed is None or fiducial_ms_precomputed is None or alignment_precomputed is None:
+            logger.info("[파이프라인] STEP 2-A — 피듀셜 마크 탐지")
+            stage1 = fiducial_detector if settings.USE_SEPARATE_MODELS else detector
+            fiducials, fiducial_ms = stage1.detect_fiducials(frame)
+            alignment = compute_alignment(fiducials)
+        else:
+            logger.info("[파이프라인] STEP 2-A — 사전 감지된 피듀셜 사용")
+            fiducials = fiducials_precomputed
+            fiducial_ms = fiducial_ms_precomputed
+            alignment = alignment_precomputed
 
         measured_skew_deg = alignment.angle_error_deg
 
@@ -279,6 +300,22 @@ def _run_production_vision_pipeline(
             f1x, f1y = alignment.fiducial1.center_x, alignment.fiducial1.center_y
         if alignment.fiducial2:
             f2x, f2y = alignment.fiducial2.center_x, alignment.fiducial2.center_y
+
+        if len(fiducials) < 2:
+            logger.info("[파이프라인] PCB/피듀셜 미검출 → SKIPPED, Stage 2 건너뜀")
+            f1c, f2c = _fiducial_confidences(alignment)
+            packet = _build_packet(
+                result=InspectionResult.SKIPPED,
+                f1x=f1x, f1y=f1y, f2x=f2x, f2y=f2y,
+                f1_conf=f1c, f2_conf=f2c,
+                angle_error=measured_skew_deg,
+                inference_ms=fiducial_ms,
+                defects=[],
+                image_path=image_path,
+                pipeline_start=pipeline_start,
+            )
+            _finalize(packet)
+            return packet
 
         if not alignment.is_aligned:
             logger.warning("[파이프라인] 피듀셜/기울기 조건 불충족 → FAIL, Stage 2 건너뜀")
@@ -429,6 +466,52 @@ def _build_packet(
         inspected_at=datetime.now(),
         defects=defects,
     )
+
+
+def run_inspection_pipeline_when_pcb_present() -> bool:
+    """
+    자동 검사 전용:
+    라이브 프레임에서 PCB(피듀셜 2개)가 보일 때만 이미지를 저장하고 본검사를 실행한다.
+
+    Returns:
+        실제 검사까지 수행했으면 True, PCB 미검출로 건너뛰었으면 False.
+    """
+    if camera is None:
+        logger.debug("[자동검사] 카메라가 없어 PCB 감지를 건너뜁니다.")
+        return False
+
+    has_models = (
+        (fiducial_detector is not None and defect_detector is not None)
+        if settings.USE_SEPARATE_MODELS
+        else detector is not None
+    )
+    if not has_models:
+        logger.warning("[자동검사] YOLO 모델이 로드되지 않아 PCB 감지를 건너뜁니다.")
+        return False
+
+    pipeline_start = time.perf_counter()
+    frame = camera.capture()
+    stage1 = fiducial_detector if settings.USE_SEPARATE_MODELS else detector
+    fiducials, fiducial_ms = stage1.detect_fiducials(frame)
+
+    if len(fiducials) < 2:
+        logger.debug("[자동검사] PCB 미감지 — 피듀셜 %d개", len(fiducials))
+        return False
+
+    alignment = compute_alignment(fiducials)
+    image_path = _save_frame(frame)
+
+    logger.info("[자동검사] PCB 감지 — 본검사 시작")
+    _run_production_vision_pipeline(
+        frame,
+        image_path,
+        pipeline_start,
+        debug_imshow=False,
+        fiducials_precomputed=fiducials,
+        fiducial_ms_precomputed=fiducial_ms,
+        alignment_precomputed=alignment,
+    )
+    return True
 
 
 def _finalize(packet: InspectionPacket) -> None:

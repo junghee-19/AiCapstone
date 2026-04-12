@@ -7,7 +7,7 @@
  */
 
 import axios from 'axios'
-import type { InspectionLog, InspectionStats } from '@/types/inspection'
+import type { FailRateTrendPoint, InspectionLog, InspectionStats } from '@/types/inspection'
 
 // ── Axios 인스턴스 생성 ───────────────────────────────────────────────────────
 
@@ -84,6 +84,16 @@ export const fetchRecentInspections = async (limit = 10): Promise<InspectionLog[
  */
 export const fetchStats = async (): Promise<InspectionStats> => {
   const { data } = await apiClient.get<InspectionStats>('/inspections/stats')
+  return data
+}
+
+export const fetchFailRateTrend = async (
+  groupBy: 'week' | 'month',
+  periods: number
+): Promise<FailRateTrendPoint[]> => {
+  const { data } = await apiClient.get<FailRateTrendPoint[]>('/inspections/stats/fail-rate-trend', {
+    params: { groupBy, periods },
+  })
   return data
 }
 
