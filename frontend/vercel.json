@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://aicapstonev2-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/edge/:path*",
+      "destination": "https://edge-placeholder-update-after-tunnel.invalid/edge/:path*"
+    },
+    {
+      "source": "/captures/:path*",
+      "destination": "https://edge-placeholder-update-after-tunnel.invalid/captures/:path*"
+    },
+    {
+      "source": "/demo_samples/:path*",
+      "destination": "https://edge-placeholder-update-after-tunnel.invalid/demo_samples/:path*"
+    },
+    {
+      "source": "/((?!api|edge|captures|demo_samples).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
