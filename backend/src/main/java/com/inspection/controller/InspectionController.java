@@ -29,12 +29,11 @@ import java.util.Map;
  * - GET    /api/inspections/period   → 기간 필터 조회
  * - DELETE /api/inspections          → 전체 이력 삭제 (대시보드)
  *
- * @CrossOrigin: React 개발 서버(localhost:5173)의 CORS 요청을 허용한다.
- *               운영 배포 시에는 특정 도메인으로 제한할 것.
+ * CORS는 {@link com.inspection.global.CorsConfig} 에서 전역 설정.
+ *   - 환경변수 CORS_ALLOWED_ORIGINS 로 허용 origin 목록 주입
  */
 @RestController
 @RequestMapping("/api/inspections")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"})
 @Slf4j
 @RequiredArgsConstructor
 public class InspectionController {
