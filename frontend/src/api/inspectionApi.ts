@@ -6,6 +6,7 @@
  * http://localhost:8080 으로 포워딩된다.
  */
 
+
 import axios from 'axios'
 import type { FailRateTrendPoint, InspectionLog, InspectionStats } from '@/types/inspection'
 
