@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import axios from 'axios'
 import type { FailRateTrendPoint, InspectionLog, InspectionStats } from '@/types/inspection'
 
@@ -31,6 +33,23 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+export interface EdgeDevice {
+  deviceId: string
+  connected: boolean
+  connectedAt: string
+  lastSeenAt: string
+  lastStatus?: Record<string, unknown>
+  lastMessage?: Record<string, unknown>
+}
+
+export interface EdgeCommandMessage {
+  type: string
+  requestId: string
+  deviceId: string
+  timestamp: string
+  payload?: Record<string, unknown>
+}
 
 export const fetchAllInspections = async (): Promise<InspectionLog[]> => {
   const { data } = await apiClient.get<InspectionLog[]>('/inspections')
@@ -79,4 +98,30 @@ export const fetchInspectionsByPeriod = async (
 
 export const deleteAllInspections = async (): Promise<void> => {
   await apiClient.delete('/inspections')
+}
+
+export const fetchEdgeDevices = async (): Promise<EdgeDevice[]> => {
+  const { data } = await apiClient.get<EdgeDevice[]>('/edge/devices')
+  return data
+}
+
+export const triggerEdgeInspection = async (deviceId: string): Promise<EdgeCommandMessage> => {
+  const { data } = await apiClient.post<EdgeCommandMessage>(
+    `/edge/${encodeURIComponent(deviceId)}/inspect/trigger`
+  )
+  return data
+}
+
+/**
+ * 이미지 업로드 → Spring 백엔드 /api/inspections (multipart)
+ * 백엔드가 inference-service로 forward → DB 저장 후 응답.
+ */
+export const inspectImage = async (file: File): Promise<InspectionLog> => {
+  const formData = new FormData()
+  formData.append('image', file)
+
+  const { data } = await apiClient.post<InspectionLog>('/inspections', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
 }
