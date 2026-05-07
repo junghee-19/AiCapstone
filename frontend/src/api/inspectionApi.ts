@@ -34,6 +34,23 @@ apiClient.interceptors.response.use(
   }
 )
 
+export interface EdgeDevice {
+  deviceId: string
+  connected: boolean
+  connectedAt: string
+  lastSeenAt: string
+  lastStatus?: Record<string, unknown>
+  lastMessage?: Record<string, unknown>
+}
+
+export interface EdgeCommandMessage {
+  type: string
+  requestId: string
+  deviceId: string
+  timestamp: string
+  payload?: Record<string, unknown>
+}
+
 export const fetchAllInspections = async (): Promise<InspectionLog[]> => {
   const { data } = await apiClient.get<InspectionLog[]>('/inspections')
   return data
@@ -81,6 +98,18 @@ export const fetchInspectionsByPeriod = async (
 
 export const deleteAllInspections = async (): Promise<void> => {
   await apiClient.delete('/inspections')
+}
+
+export const fetchEdgeDevices = async (): Promise<EdgeDevice[]> => {
+  const { data } = await apiClient.get<EdgeDevice[]>('/edge/devices')
+  return data
+}
+
+export const triggerEdgeInspection = async (deviceId: string): Promise<EdgeCommandMessage> => {
+  const { data } = await apiClient.post<EdgeCommandMessage>(
+    `/edge/${encodeURIComponent(deviceId)}/inspect/trigger`
+  )
+  return data
 }
 
 /**

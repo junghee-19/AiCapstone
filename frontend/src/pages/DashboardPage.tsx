@@ -12,25 +12,47 @@
  * └──────────────────────────────────────────────────┘
  */
 
-import { useRef, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Camera, FolderOpen, Loader2, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Camera, FolderOpen, Loader2, Radio, Trash2 } from 'lucide-react'
 import StatCardGroup from '@/components/dashboard/StatCard'
 import PassFailChart from '@/components/dashboard/PassFailChart'
 import FailRateTrendChart from '@/components/dashboard/FailRateTrendChart'
 import TrendChart from '@/components/dashboard/TrendChart'
 import InspectionTable from '@/components/inspection/InspectionTable'
-import { deleteAllInspections, inspectImage } from '@/api/inspectionApi'
+import {
+  deleteAllInspections,
+  fetchEdgeDevices,
+  inspectImage,
+  triggerEdgeInspection,
+} from '@/api/inspectionApi'
 import { useRecentInspections } from '@/hooks/useInspectionData'
 
 export default function DashboardPage() {
   const queryClient = useQueryClient()
   const [actionMsg, setActionMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [selectedDeviceId, setSelectedDeviceId] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   /* 최근 15건 — 대시보드 하단 실시간 피드 테이블 */
   const { data: recentLogs = [], isLoading } = useRecentInspections(15)
+  const { data: edgeDevices = [], isLoading: isLoadingEdgeDevices } = useQuery({
+    queryKey: ['edge-devices'],
+    queryFn: fetchEdgeDevices,
+    refetchInterval: 5_000,
+  })
+  const connectedDevices = useMemo(
+    () => edgeDevices.filter((device) => device.connected),
+    [edgeDevices]
+  )
+
+  useEffect(() => {
+    if (selectedDeviceId && connectedDevices.some((device) => device.deviceId === selectedDeviceId)) {
+      return
+    }
+    setSelectedDeviceId(connectedDevices[0]?.deviceId ?? '')
+  }, [connectedDevices, selectedDeviceId])
 
   const invalidateInspections = () => {
     queryClient.invalidateQueries({ queryKey: ['inspections'] })
@@ -61,12 +83,28 @@ export default function DashboardPage() {
     },
   })
 
-  // 지금 검사 — 카메라/소켓 기반 (API 미연결 상태)
+  const instantInspectMutation = useMutation({
+    mutationFn: triggerEdgeInspection,
+    onSuccess: (command) => {
+      setActionMsg({
+        type: 'ok',
+        text: `검사 명령 전송 완료 — ${command.deviceId}`,
+      })
+      queryClient.invalidateQueries({ queryKey: ['edge-devices'] })
+    },
+    onError: (e: Error) => {
+      setActionMsg({ type: 'err', text: e.message || '검사 명령 전송 실패' })
+    },
+  })
+
+  // 지금 검사 — Spring Boot WebSocket에 연결된 Edge 디바이스로 명령 전송
   const handleInstantInspectClick = () => {
-    setActionMsg({
-      type: 'err',
-      text: '지금 검사 기능은 아직 준비 중입니다. 업로드 검사를 사용해주세요.',
-    })
+    if (!selectedDeviceId) {
+      setActionMsg({ type: 'err', text: '연결된 Edge 디바이스를 선택해주세요.' })
+      return
+    }
+    setActionMsg(null)
+    instantInspectMutation.mutate(selectedDeviceId)
   }
 
   const handleDeleteHistory = () => {
@@ -93,12 +131,42 @@ export default function DashboardPage() {
         </div>
         <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0 min-w-[min(100%,280px)]">
           <div className="flex flex-wrap items-center gap-2 justify-end">
+            <label className="relative inline-flex items-center">
+              <Radio
+                size={15}
+                className="pointer-events-none absolute left-3 text-emerald-400"
+              />
+              <select
+                value={selectedDeviceId}
+                onChange={(e) => setSelectedDeviceId(e.target.value)}
+                disabled={isLoadingEdgeDevices || connectedDevices.length === 0}
+                className="h-9 min-w-44 rounded-lg border border-gray-700 bg-gray-900 pl-9 pr-8 text-sm font-medium text-gray-100 outline-none transition-colors hover:border-gray-600 focus:border-indigo-500 disabled:opacity-50"
+                title="WebSocket 연결 디바이스 선택"
+              >
+                {connectedDevices.length === 0 ? (
+                  <option value="">
+                    {isLoadingEdgeDevices ? '디바이스 확인 중' : '연결 디바이스 없음'}
+                  </option>
+                ) : (
+                  connectedDevices.map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.deviceId}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
             <button
               type="button"
               onClick={handleInstantInspectClick}
+              disabled={!selectedDeviceId || instantInspectMutation.isPending}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white transition-colors"
             >
-              <Camera size={16} />
+              {instantInspectMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Camera size={16} />
+              )}
               지금 검사
             </button>
             <button
