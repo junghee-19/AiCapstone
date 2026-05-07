@@ -209,6 +209,7 @@ async def _wait_for_centered_stable_pcb_frame() -> tuple[np.ndarray, str, list, 
 camera:           Optional[CameraCapture] = None
 detector:         Optional[YoloDetector]  = None  # 단일 모델 모드
 sender:           Optional[ServerSender]   = None
+gpio:             Any = None
 board_id_detector: Optional[YoloDetector] = None
 board_profiles: dict[str, dict[str, Any]] = {}
 board_detector_cache: dict[str, YoloDetector] = {}
