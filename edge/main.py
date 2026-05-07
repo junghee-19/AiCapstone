@@ -448,7 +448,7 @@ async def run_inspection_pipeline(
 
         frame, image_path, fiducials, fiducial_ms, alignment = await _wait_for_centered_stable_pcb_frame()
 
-        debug_imshow = settings.ENVIRONMENT == "development"
+        debug_imshow = settings.ENVIRONMENT == "development" and not force_camera
         mode = (stage2_source_mode or settings.STAGE2_SOURCE_MODE).strip().lower()
         return _run_production_vision_pipeline(
             frame,
