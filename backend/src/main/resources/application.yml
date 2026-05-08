@@ -22,6 +22,12 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 30MB           # 단일 파일 최대 (PNG·고해상도 PCB 사진 대응)
+      max-request-size: 30MB
+
 server:
   address: 0.0.0.0
   port: 8080

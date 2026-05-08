@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import axios from 'axios'
 import type { FailRateTrendPoint, InspectionLog, InspectionStats } from '@/types/inspection'
 
@@ -113,13 +115,15 @@ export const triggerEdgeInspection = async (deviceId: string): Promise<EdgeComma
 /**
  * 이미지 업로드 → Spring 백엔드 /api/inspections (multipart)
  * 백엔드가 inference-service로 forward → DB 저장 후 응답.
+ *
+ * Content-Type 은 명시하지 않는다 — axios 가 FormData 를 받으면
+ * 자동으로 multipart/form-data; boundary=... 를 설정한다.
+ * 수동 지정 시 boundary 가 누락되어 서버 파싱이 실패한다.
  */
 export const inspectImage = async (file: File): Promise<InspectionLog> => {
   const formData = new FormData()
   formData.append('image', file)
 
-  const { data } = await apiClient.post<InspectionLog>('/inspections', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await apiClient.post<InspectionLog>('/inspections', formData)
   return data
 }
