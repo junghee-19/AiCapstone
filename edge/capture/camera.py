@@ -283,12 +283,13 @@ class CameraCapture:
 
     # ── 이미지 캡처 ───────────────────────────────────────────────────────────
 
-    def capture(self) -> np.ndarray:
+    def capture(self, *, flush: bool = True) -> np.ndarray:
         """
         웹캠에서 프레임을 캡처하여 numpy 배열(BGR)로 반환한다.
 
         버퍼 플러시: 연속 read()를 3회 실행한 뒤 마지막 프레임을 사용하여
         버퍼에 쌓인 오래된 프레임을 버린다.
+        프리뷰처럼 낮은 지연이 더 중요한 경우 flush=False 로 즉시 read() 한다.
 
         Returns:
             np.ndarray: BGR 형식의 이미지 배열 (H, W, 3)
@@ -301,8 +302,9 @@ class CameraCapture:
 
         with self._capture_lock:
             # 버퍼에 쌓인 이전 프레임 제거 (3프레임 버퍼 플러시)
-            for _ in range(3):
-                self._cap.grab()
+            if flush:
+                for _ in range(3):
+                    self._cap.grab()
 
             ret, frame = self._cap.read()
             if not ret or frame is None:
