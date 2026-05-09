@@ -49,8 +49,14 @@ public class InspectionResponseDto {
     /** 총 처리 시간 (ms) */
     private Integer totalTimeMs;
 
-    /** 캡처 이미지 경로 */
+    /** DB 에 저장된 이미지 파일명 (디스크 상의 실제 파일을 가리킴) */
     private String imagePath;
+
+    /**
+     * 프론트에서 바로 사용할 수 있는 이미지 API URL.
+     * Spring 의 GET /api/inspections/{id}/image 와 동일.
+     */
+    private String imageUrl;
 
     /** 검사 수행 시각 */
     private LocalDateTime inspectedAt;
@@ -92,6 +98,9 @@ public class InspectionResponseDto {
                 .inferenceTimeMs(log.getInferenceTimeMs())
                 .totalTimeMs(log.getTotalTimeMs())
                 .imagePath(log.getImagePath())
+                .imageUrl(log.getImagePath() != null && !log.getImagePath().isBlank()
+                        ? "/api/inspections/" + log.getId() + "/image"
+                        : null)
                 .inspectedAt(log.getInspectedAt())
                 .createdAt(log.getCreatedAt())
                 .defects(defectDtos)

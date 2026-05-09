@@ -1,19 +1,32 @@
 package com.inspection.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspection.dto.InspectionRequestDto;
 import com.inspection.dto.InspectionResponseDto;
+import com.inspection.service.ImageStorageService;
 import com.inspection.service.InspectionService;
-import jakarta.validation.Valid;
+import jakarta.validation.Validator;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 검사 이력 REST API 컨트롤러
@@ -39,33 +52,94 @@ import java.util.Map;
 public class InspectionController {
 
     private final InspectionService inspectionService;
+    private final ImageStorageService imageStorageService;
+    private final ObjectMapper objectMapper;
+    private final Validator validator;
 
     // ========================================================================
     // 1. 검사 결과 수신 (라즈베리파이 → 서버)
     // ========================================================================
 
     /**
-     * [엣지 디바이스 전용] 검사 결과 JSON 수신 및 DB 저장
+     * [엣지 디바이스 전용] 검사 결과 multipart 수신 및 DB 저장
      *
      * <p>POST /api/inspections
+     * <p>Content-Type: multipart/form-data
      *
-     * <p>@Valid: InspectionRequestDto의 Bean Validation 어노테이션을 실행.
-     *           유효성 검사 실패 시 400 Bad Request 자동 반환.
+     * <p>두 파트:
+     *   - {@code metadata} : InspectionRequestDto 직렬화 JSON 텍스트
+     *   - {@code image}    : 캡처 이미지 바이너리 (선택 — SKIPPED 등에는 생략)
      *
-     * @param requestDto 엣지 디바이스가 전송한 검사 결과 JSON
+     * <p>이미지는 디스크에 저장되고 DB 의 image_path 에는 파일명만 들어간다.
+     *
      * @return 201 Created + 저장된 검사 이력 DTO
      */
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<InspectionResponseDto> receiveInspectionResult(
-            @Valid @RequestBody InspectionRequestDto requestDto) {
+            @RequestPart("metadata") String metadataJson,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
 
-        log.info("[POST /api/inspections] 수신 - 디바이스: {}, 결과: {}",
-                requestDto.getDeviceId(), requestDto.getResult());
+        InspectionRequestDto requestDto = parseMetadata(metadataJson);
+        validateMetadata(requestDto);
 
-        InspectionResponseDto response = inspectionService.saveInspectionResult(requestDto);
+        log.info("[POST /api/inspections] 수신 - 디바이스: {}, 결과: {}, 이미지: {}",
+                requestDto.getDeviceId(),
+                requestDto.getResult(),
+                (image != null && !image.isEmpty()) ? image.getOriginalFilename() : "없음");
 
-        // 201 Created + Location 헤더 없이 단순 응답 (엣지 디바이스는 Location 불필요)
+        InspectionResponseDto response = inspectionService.saveInspectionResult(requestDto, image);
         return ResponseEntity.status(201).body(response);
+    }
+
+    private InspectionRequestDto parseMetadata(String json) {
+        try {
+            return objectMapper.readValue(json, InspectionRequestDto.class);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "metadata 파싱 실패: " + e.getMessage(), e);
+        }
+    }
+
+    private void validateMetadata(InspectionRequestDto dto) {
+        Set<ConstraintViolation<InspectionRequestDto>> violations = validator.validate(dto);
+        if (!violations.isEmpty()) {
+            String msg = violations.stream()
+                    .map(v -> v.getPropertyPath() + " " + v.getMessage())
+                    .collect(Collectors.joining(", "));
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "metadata 검증 실패: " + msg);
+        }
+    }
+
+    /**
+     * 검사 캡처 이미지 단건 조회.
+     *
+     * <p>GET /api/inspections/{id}/image
+     *
+     * <p>DB 의 image_path 컬럼에 저장된 파일명을 ImageStorageService 로 로드해 그대로 스트리밍.
+     */
+    @GetMapping("/{id}/image")
+    public ResponseEntity<Resource> getInspectionImage(@PathVariable Long id) {
+        InspectionResponseDto found = inspectionService.getInspectionById(id);
+        String filename = found.getImagePath();
+        if (filename == null || filename.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+        Resource resource = imageStorageService.load(filename);
+
+        MediaType contentType = MediaType.IMAGE_JPEG;
+        try {
+            String probed = Files.probeContentType(resource.getFile().toPath());
+            if (probed != null) {
+                contentType = MediaType.parseMediaType(probed);
+            }
+        } catch (IOException ignored) {
+            // 기본 JPEG 로 fallback
+        }
+
+        return ResponseEntity.ok()
+                .contentType(contentType)
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                .body(resource);
     }
 
     // ========================================================================

@@ -36,3 +36,7 @@ logging:
   level:
     com.inspection: DEBUG
     org.springframework.web: INFO
+
+inspection:
+  # 검사 캡처 이미지 저장 디렉토리 (도커 볼륨으로 호스트에 매핑)
+  image-storage-dir: ${INSPECTION_IMAGE_DIR:/var/inspection-images}

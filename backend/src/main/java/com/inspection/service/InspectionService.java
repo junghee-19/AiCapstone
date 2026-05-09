@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -43,6 +44,7 @@ public class InspectionService {
 
     private final InspectionLogRepository inspectionLogRepository;
     private final DefectDetailRepository defectDetailRepository;
+    private final ImageStorageService imageStorageService;
 
     // ── 검사 결과 저장 ────────────────────────────────────────────────────────
 
@@ -59,9 +61,16 @@ public class InspectionService {
      * @return 저장된 검사 이력 응답 DTO (id 포함)
      */
     @Transactional
-    public InspectionResponseDto saveInspectionResult(InspectionRequestDto dto) {
+    public InspectionResponseDto saveInspectionResult(InspectionRequestDto dto, MultipartFile image) {
         log.info("[검사 수신] 디바이스: {}, 결과: {}, 시각: {}",
                 dto.getDeviceId(), dto.getResult(), dto.getInspectedAt());
+
+        // 0. 이미지 파일이 함께 들어오면 디스크에 저장하고, DB 에는 파일명만 남긴다.
+        //    이미지가 없으면 (예: SKIPPED) 경로 컬럼은 null.
+        String storedFilename = null;
+        if (image != null && !image.isEmpty()) {
+            storedFilename = imageStorageService.store(image);
+        }
 
         // 1. 요청 DTO → InspectionLog 엔티티 구성
         InspectionLog log = InspectionLog.builder()
@@ -76,7 +85,7 @@ public class InspectionService {
                 .angleErrorDeg(dto.getAngleErrorDeg())
                 .inferenceTimeMs(dto.getInferenceTimeMs())
                 .totalTimeMs(dto.getTotalTimeMs())
-                .imagePath(dto.getImagePath())
+                .imagePath(storedFilename)
                 .inspectedAt(dto.getInspectedAt())
                 .build();
 

@@ -9,8 +9,11 @@ Spring Boot REST API(POST /api/inspections)로 전송한다.
   재시도 간격은 지수 백오프(1s → 2s → 4s)로 증가한다.
 """
 
+import json
 import logging
+import mimetypes
 import time
+from pathlib import Path
 from typing import Optional
 
 import requests
@@ -39,11 +42,10 @@ class ServerSender:
         # POST 엔드포인트 URL 조립
         self.endpoint = f"{base_url.rstrip('/')}/api/inspections"
         # Session 재사용: TCP 연결 유지 (Connection Keep-Alive)
+        # multipart 업로드라 Content-Type 은 requests 가 boundary 와 함께 자동 설정.
         self._session = requests.Session()
         self._session.headers.update({
-            "Content-Type": "application/json",
-            "Accept":       "application/json",
-            # 엣지 디바이스 식별용 커스텀 헤더
+            "Accept":        "application/json",
             "X-Device-Type": "RaspberryPi5-EdgeNode",
         })
         logger.info("[전송] 서버 엔드포인트: %s", self.endpoint)
@@ -52,21 +54,20 @@ class ServerSender:
 
     def send(self, packet: InspectionPacket) -> Optional[dict]:
         """
-        InspectionPacket을 서버로 POST 전송한다.
+        InspectionPacket 을 multipart/form-data 로 서버에 POST 전송한다.
+
+        파트 구성:
+          - metadata : InspectionPacket camelCase JSON 텍스트 (application/json)
+          - image    : 캡처 이미지 바이너리 (선택, image_path 가 실제 파일을 가리킬 때만)
 
         재시도 로직:
-          - ConnectionError / Timeout 발생 시 지수 백오프 후 재시도
-          - 서버 응답 4xx: 요청 오류이므로 재시도하지 않음
-          - 서버 응답 5xx: 서버 오류이므로 재시도
-
-        Args:
-            packet: 전송할 검사 결과 패킷
+          - ConnectionError / Timeout: 지수 백오프 후 재시도
+          - 응답 4xx: 즉시 실패 (재시도 안 함)
+          - 응답 5xx: 재시도
 
         Returns:
-            전송 성공 시 서버 응답 JSON 딕셔너리,
-            실패 시 None
+            성공 시 서버 응답 JSON, 실패 시 None
         """
-        # InspectionPacket → camelCase JSON 딕셔너리 변환
         payload = packet.to_server_json()
         logger.info("[전송] 전송 시작 — 디바이스: %s, 결과: %s",
                     packet.device_id, packet.result.value)
@@ -76,9 +77,10 @@ class ServerSender:
 
         for attempt in range(1, MAX_RETRY + 1):
             try:
+                multipart = self._build_multipart(packet, payload)
                 response = self._session.post(
                     self.endpoint,
-                    json=payload,
+                    files=multipart,
                     timeout=REQUEST_TIMEOUT,
                 )
 
@@ -128,6 +130,32 @@ class ServerSender:
             MAX_RETRY, last_exception
         )
         return None
+
+    def _build_multipart(self, packet: InspectionPacket, payload: dict) -> list[tuple]:
+        """
+        requests `files` 인자에 넘길 multipart 파트 목록을 만든다.
+
+        - metadata: InspectionPacket camelCase JSON 텍스트 (application/json)
+        - image: packet.image_path 가 실제 파일을 가리킬 때만 포함
+        """
+        parts: list[tuple] = [
+            ("metadata", (None, json.dumps(payload, ensure_ascii=False), "application/json")),
+        ]
+
+        if packet.image_path:
+            img_path = Path(packet.image_path)
+            if img_path.is_file():
+                content_type, _ = mimetypes.guess_type(img_path.name)
+                if not content_type:
+                    content_type = "image/jpeg"
+                # 파일 핸들은 requests 가 본 요청 후 close 처리.
+                parts.append(
+                    ("image", (img_path.name, img_path.open("rb"), content_type))
+                )
+            else:
+                logger.warning("[전송] image_path 파일 없음 — 메타데이터만 전송: %s", img_path)
+
+        return parts
 
     def close(self) -> None:
         """HTTP 세션을 닫는다. 애플리케이션 종료 시 호출."""
