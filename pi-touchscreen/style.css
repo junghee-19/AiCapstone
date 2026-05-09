@@ -16,8 +16,9 @@ body {
   overflow: hidden;
   background: #000;
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Noto Sans KR",
-    sans-serif;
+  /* 대시보드(Tailwind) 기본 폰트 스택과 통일 */
+  font-family: ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   font-weight: 600;
 }
 
@@ -96,41 +97,49 @@ body[data-status="RESULT"] .screen-result { display: flex; flex-direction: colum
 
 /* ── 화면 3: 결과 ───────────────────────────────────────────────── */
 .screen-result {
-  padding: 16px;
+  padding: 12px;
   gap: 12px;
 }
+
+/*
+ * 결과 헤더 — 한 눈에 보이도록 크고 굵게.
+ * 색상은 대시보드 InspectionTable.ResultBadge 와 동일 (Tailwind green-500/15+green-400, red-500/15+red-400, slate).
+ */
 .result-header {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  padding: 10px 24px;
-  border-radius: 18px;
-  font-size: 44px;
-  font-weight: 800;
+  padding: 18px 36px;
+  border-radius: 24px;
+  /* 폰트 = body 의 기본 (Tailwind ui-sans-serif 스택) 상속 — 별도 지정 없음 */
+  font-size: clamp(64px, 14vw, 128px);   /* 작은 화면 64px ~ 큰 화면 128px 자동 */
+  font-weight: 700;                       /* 대시보드 ResultBadge 의 font-bold 와 동일 */
   letter-spacing: 0.05em;
+  line-height: 1;
   width: 100%;
-  max-width: 720px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 .result-header[data-result="PASS"] {
-  background: rgba(34, 197, 94, 0.15);
-  border: 2px solid #22c55e;
-  color: #4ade80;
+  background: rgba(34, 197, 94, 0.15);     /* green-500 / 15 */
+  border: 4px solid rgba(34, 197, 94, 0.5); /* green-500 / 50 (= ring-1 강화판) */
+  color: #4ade80;                           /* green-400 */
+  box-shadow: 0 0 32px rgba(34, 197, 94, 0.25);
 }
 .result-header[data-result="FAIL"] {
-  background: rgba(239, 68, 68, 0.15);
-  border: 2px solid #ef4444;
-  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);     /* red-500 / 15 */
+  border: 4px solid rgba(239, 68, 68, 0.5);
+  color: #f87171;                           /* red-400 */
+  box-shadow: 0 0 32px rgba(239, 68, 68, 0.3);
 }
 .result-header[data-result="SKIPPED"] {
-  background: rgba(148, 163, 184, 0.15);
-  border: 2px solid #64748b;
-  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.15);   /* slate-500 / 15 */
+  border: 4px solid rgba(148, 163, 184, 0.5);
+  color: #cbd5e1;                           /* slate-300 */
+  box-shadow: 0 0 24px rgba(148, 163, 184, 0.2);
 }
-#result-icon {
-  font-size: 56px;
-  line-height: 1;
+#result-text {
+  font-weight: 700;
 }
 
 .result-canvas-wrap {
@@ -150,9 +159,3 @@ body[data-status="RESULT"] .screen-result { display: flex; flex-direction: colum
   display: block;
 }
 
-.result-footer {
-  flex: 0 0 auto;
-  font-size: 18px;
-  color: #94a3b8;
-  letter-spacing: 0.04em;
-}
