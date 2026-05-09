@@ -13,8 +13,6 @@ _auto_running: bool = False
 _auto_interval: float = 5.0
 _auto_task: Optional[asyncio.Task[None]] = None
 _trigger_lock = asyncio.Lock()
-_idle_revert_task: Optional[asyncio.Task[None]] = None
-RESULT_DISPLAY_SECONDS: float = 6.0
 AUTO_INSPECTION_ENABLED: bool = False
 
 
@@ -31,6 +29,21 @@ def _packet_to_touchscreen_payload(packet: InspectionPacket) -> dict[str, Any]:
         }
         for d in (packet.defects or [])
     ]
+    fiducials: list[dict[str, Any]] = []
+    if packet.fiducial1_x is not None and packet.fiducial1_y is not None:
+        fiducials.append({
+            "label": "F1",
+            "x": packet.fiducial1_x,
+            "y": packet.fiducial1_y,
+            "confidence": packet.fiducial1_confidence,
+        })
+    if packet.fiducial2_x is not None and packet.fiducial2_y is not None:
+        fiducials.append({
+            "label": "F2",
+            "x": packet.fiducial2_x,
+            "y": packet.fiducial2_y,
+            "confidence": packet.fiducial2_confidence,
+        })
     image_url = None
     if packet.image_path:
         # /captures/xxx.jpg 형태로 마운트되어 있음 (edge/main.py 의 StaticFiles)
@@ -43,12 +56,14 @@ def _packet_to_touchscreen_payload(packet: InspectionPacket) -> dict[str, Any]:
     return {
         "result": packet.result.value if hasattr(packet.result, "value") else str(packet.result),
         "defects": defects,
+        "fiducials": fiducials,
         "imageUrl": image_url,
         "inspectedAt": packet.inspected_at.isoformat() if packet.inspected_at else None,
     }
 
 
 async def _notify_result(packet: InspectionPacket) -> None:
+    """결과 페이로드를 터치스크린 상태에 반영. 다음 검사(BUSY)가 시작될 때까지 RESULT 유지."""
     state = get_touchscreen_state()
     payload = _packet_to_touchscreen_payload(packet)
     await state.set_result(
@@ -56,21 +71,8 @@ async def _notify_result(packet: InspectionPacket) -> None:
         defects=payload["defects"],
         image_url=payload["imageUrl"],
         inspected_at=payload["inspectedAt"],
+        fiducials=payload["fiducials"],
     )
-
-    # RESULT_DISPLAY_SECONDS 후 IDLE 로 자동 복귀
-    global _idle_revert_task
-    if _idle_revert_task and not _idle_revert_task.done():
-        _idle_revert_task.cancel()
-    _idle_revert_task = asyncio.create_task(_revert_to_idle_after(RESULT_DISPLAY_SECONDS))
-
-
-async def _revert_to_idle_after(seconds: float) -> None:
-    try:
-        await asyncio.sleep(seconds)
-        await get_touchscreen_state().set_idle()
-    except asyncio.CancelledError:
-        pass
 
 
 def auto_status() -> dict[str, Any]:
@@ -122,6 +124,35 @@ async def trigger_inspection_once(stage2_source_mode: Optional[str] = None) -> I
         if packet is None:
             await state.set_idle()
             raise RuntimeError("검사 실행 중 오류가 발생했습니다.")
+
+        await _notify_result(packet)
+        return packet
+
+
+async def trigger_file_inspection(
+    path: str,
+    stage2_source_mode: Optional[str] = None,
+) -> Optional[InspectionPacket]:
+    """파일 기반 검사를 실행하고 터치스크린 상태도 함께 갱신한다."""
+    state = get_touchscreen_state()
+    async with _trigger_lock:
+        logger.info("[검사제어] 파일 검사 실행: %s", path)
+        await state.set_busy()
+        try:
+            from main import run_inspection_pipeline_from_source_file
+        except ImportError as e:
+            await state.set_idle()
+            raise RuntimeError("검사 파이프라인을 로드할 수 없습니다.") from e
+
+        try:
+            packet = await run_inspection_pipeline_from_source_file(path, stage2_source_mode)
+        except Exception:
+            await state.set_idle()
+            raise
+
+        if packet is None:
+            await state.set_idle()
+            return None
 
         await _notify_result(packet)
         return packet

@@ -76,8 +76,9 @@
     resultText.textContent = result
 
     const defects = state.defects || []
+    const fiducials = state.fiducials || []
     if (state.imageUrl) {
-      drawCapturedImage(state.imageUrl, defects, result)
+      drawCapturedImage(state.imageUrl, defects, fiducials, result)
     } else {
       // 이미지 없을 때 — 캔버스 비우고 텍스트만
       canvas.width = 800
@@ -91,7 +92,7 @@
     }
   }
 
-  function drawCapturedImage(url, defects, result) {
+  function drawCapturedImage(url, defects, fiducials, result) {
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
@@ -107,6 +108,9 @@
 
       if (result === 'FAIL' && defects.length) {
         drawDefectBoxes(defects, ratio)
+      }
+      if (fiducials.length) {
+        drawFiducialMarkers(fiducials, ratio)
       }
     }
     img.onerror = () => {
@@ -157,6 +161,80 @@
 
       // 다음 박스를 위해 stroke 굵기 복구
       ctx.lineWidth = stroke
+    })
+  }
+
+  // ── 피듀셜 마커 그리기 (대시보드 FiducialMarker 와 동일 스타일) ──────────────
+  function drawFiducialMarkers(fiducials, ratio) {
+    const color = '#38bdf8'
+    // 캔버스 크기에 맞춰 마커 크기 스케일 — 대시보드 SVG 기본값(arm=16) 기준으로
+    // 캔버스가 클수록 마커도 키워야 보임
+    const scale = Math.max(1, canvas.width / 800)
+    const arm = 16 * scale
+    const gap = 5 * scale
+    const radius = 11 * scale
+    const stroke = 1.75 * scale
+    const labelFont = Math.round(10 * scale)
+    const coordFont = Math.round(13 * scale)
+
+    fiducials.forEach((f) => {
+      const sx = f.x * ratio
+      const sy = f.y * ratio
+
+      // 십자선 (가운데 빔)
+      ctx.strokeStyle = color
+      ctx.lineWidth = stroke
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(sx - arm, sy); ctx.lineTo(sx - gap, sy)
+      ctx.moveTo(sx + gap, sy); ctx.lineTo(sx + arm, sy)
+      ctx.moveTo(sx, sy - arm); ctx.lineTo(sx, sy - gap)
+      ctx.moveTo(sx, sy + gap); ctx.lineTo(sx, sy + arm)
+      ctx.stroke()
+
+      // 중심 원
+      ctx.beginPath()
+      ctx.arc(sx, sy, radius, 0, Math.PI * 2)
+      ctx.stroke()
+
+      // 라벨 (예: "F1 95%") — 마크 위쪽
+      const cap =
+        f.confidence != null && !Number.isNaN(f.confidence)
+          ? `${f.label} ${(f.confidence * 100).toFixed(0)}%`
+          : f.label
+      ctx.font = `600 ${labelFont}px ui-monospace, monospace`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      const labelTextW = ctx.measureText(cap).width
+      const tw = Math.min(160 * scale, Math.max(44 * scale, labelTextW + 12 * scale))
+      const labelH = labelFont + 6
+      const labelY = sy - 14 * scale - labelH / 2
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.78)'
+      ctx.fillRect(sx - tw / 2, labelY - labelH / 2, tw, labelH)
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)'
+      ctx.lineWidth = 1
+      ctx.strokeRect(sx - tw / 2, labelY - labelH / 2, tw, labelH)
+      ctx.fillStyle = '#e0f2fe'
+      ctx.fillText(cap, sx, labelY)
+
+      // 좌표 박스 (예: "(123, 456)") — 마크 아래쪽
+      const coord = `(${Math.round(f.x)}, ${Math.round(f.y)})`
+      ctx.font = `700 ${coordFont}px ui-monospace, monospace`
+      const coordTextW = ctx.measureText(coord).width
+      const cw = Math.max(176 * scale, coordTextW + 16 * scale)
+      const ch = coordFont + 12
+      const coordY = sy + arm + 2 * scale + ch / 2
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.95)'
+      ctx.fillRect(sx - cw / 2, coordY - ch / 2, cw, ch)
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(sx - cw / 2, coordY - ch / 2, cw, ch)
+      ctx.fillStyle = '#e0f2fe'
+      ctx.fillText(coord, sx, coordY)
+
+      // stroke 굵기 복구
+      ctx.lineWidth = stroke
+      ctx.strokeStyle = color
     })
   }
 

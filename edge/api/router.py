@@ -30,6 +30,7 @@ from runtime.inspection_control import (
     auto_status,
     start_auto_inspection,
     stop_auto_inspection,
+    trigger_file_inspection,
     trigger_inspection_once,
 )
 
@@ -432,10 +433,8 @@ async def inspect_from_uploaded_file(
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"모델 상태 확인 실패: {e}") from e
 
-    from main import run_inspection_pipeline_from_source_file
-
     mode = _normalize_stage2_mode(stage2Source)
-    background_tasks.add_task(run_inspection_pipeline_from_source_file, save_name, mode)
+    background_tasks.add_task(trigger_file_inspection, save_name, mode)
     return {
         "message": f"업로드 이미지 검사를 시작했습니다: {save_name} (stage2={mode})",
     }
@@ -474,10 +473,8 @@ async def inspect_from_file(
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"모델 상태 확인 실패: {e}") from e
 
-    from main import run_inspection_pipeline_from_source_file
-
     mode = _normalize_stage2_mode(stage2Source)
-    background_tasks.add_task(run_inspection_pipeline_from_source_file, body.path.strip(), mode)
+    background_tasks.add_task(trigger_file_inspection, body.path.strip(), mode)
     return {
         "message": f"파일 검사를 시작했습니다: {body.path.strip()} (stage2={mode})",
     }

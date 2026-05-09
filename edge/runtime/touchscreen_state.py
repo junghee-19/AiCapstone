@@ -49,6 +49,7 @@ class TouchscreenState:
         defects: list[dict[str, Any]],
         image_url: Optional[str] = None,
         inspected_at: Optional[str] = None,
+        fiducials: Optional[list[dict[str, Any]]] = None,
     ) -> None:
         """검사 완료 — 결과 화면으로 전환."""
         await self._update(
@@ -58,6 +59,7 @@ class TouchscreenState:
                 "defects": defects,           # [{defectType, bboxX, bboxY, bboxWidth, bboxHeight}, ...]
                 "imageUrl": image_url,        # 검사한 이미지 정적 경로 (예: /captures/xxx.jpg)
                 "inspectedAt": inspected_at,
+                "fiducials": fiducials or [], # [{label: "F1", x, y, confidence}, ...]
             }
         )
 
