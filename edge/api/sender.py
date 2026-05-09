@@ -95,8 +95,8 @@ class ServerSender:
                 # 5xx 서버 오류 → 재시도
                 if response.status_code >= 500:
                     logger.warning(
-                        "[전송] 서버 오류 %d (시도 %d/%d)",
-                        response.status_code, attempt, MAX_RETRY
+                        "[전송] 서버 오류 %d (시도 %d/%d): %s",
+                        response.status_code, attempt, MAX_RETRY, response.text[:500]
                     )
                     raise RequestException(f"서버 오류: {response.status_code}")
 
