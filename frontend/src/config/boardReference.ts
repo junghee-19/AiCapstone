@@ -17,9 +17,10 @@ export const BOARD_REFERENCES: BoardReference[] = [
     expectedCounts: {
       mount_hole: 4,
       fiducial: 2,
-      ic_chip: 2,
+      gold_finger_row: 2,
+      ic_chip: 8,
       smd_array_block: 2,
-      edge_connector_zone: 2,
+      edge_connector_zone: 1,
     },
   },
 ]
