@@ -17,13 +17,17 @@ public interface DefectDetailRepository extends JpaRepository<DefectDetail, Long
     /** 지정 기간 검사 이력에 속한 결함 상세를 일괄 삭제. */
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM DefectDetail d "
-         + "WHERE d.inspectionLog.inspectedAt BETWEEN :from AND :to")
+         + "WHERE d.inspectionLog.id IN ("
+         + "  SELECT l.id FROM InspectionLog l "
+         + "  WHERE l.inspectedAt BETWEEN :from AND :to)")
     int deleteByInspectionLogInspectedAtBetween(@Param("from") LocalDateTime from,
                                                 @Param("to") LocalDateTime to);
 
     /** 지정 시각 이전 검사 이력에 속한 결함 상세를 일괄 삭제 (보관기간 만료). */
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM DefectDetail d "
-         + "WHERE d.inspectionLog.inspectedAt < :threshold")
+         + "WHERE d.inspectionLog.id IN ("
+         + "  SELECT l.id FROM InspectionLog l "
+         + "  WHERE l.inspectedAt < :threshold)")
     int deleteByInspectionLogInspectedAtBefore(@Param("threshold") LocalDateTime threshold);
 }
