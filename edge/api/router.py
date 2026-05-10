@@ -30,6 +30,7 @@ from runtime.inspection_control import (
     auto_status,
     start_auto_inspection,
     stop_auto_inspection,
+    trigger_file_inspection,
     trigger_inspection_once,
 )
 
@@ -238,7 +239,7 @@ async def camera_preview_stream() -> StreamingResponse:
         while True:
             try:
                 with _preview_lock:
-                    frame = cam.capture()
+                    frame = cam.capture(flush=False)
                     ok, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 65])
                     if ok:
                         _last_preview_jpeg = encoded.tobytes()
@@ -300,30 +301,20 @@ async def stream_camera() -> StreamingResponse:
         import main as main_mod
 
         cam = getattr(main_mod, "camera", None)
-        stage1 = (
-            getattr(main_mod, "fiducial_detector", None)
-            if settings.USE_SEPARATE_MODELS
-            else getattr(main_mod, "detector", None)
-        )
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"카메라 상태 확인 실패: {e}") from e
 
     if cam is None:
         raise HTTPException(status_code=503, detail="카메라가 초기화되지 않았습니다.")
-    if stage1 is None:
-        raise HTTPException(status_code=503, detail="YOLO 모델이 초기화되지 않았습니다.")
 
     async def frame_generator():
+        frame_interval_sec = 0.07
+
         while True:
             try:
-                frame = cam.capture()
-                from inference.alignment import compute_alignment
+                frame = cam.capture(flush=False)
 
-                fiducials, _ = stage1.detect_fiducials(frame)
-                alignment = compute_alignment(fiducials)
-                annotated = _draw_detection_overlay(frame, fiducials, alignment)
-
-                ok, encoded = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                ok, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
                 if not ok:
                     await asyncio.sleep(0.1)
                     continue
@@ -334,7 +325,7 @@ async def stream_camera() -> StreamingResponse:
                     + encoded.tobytes()
                     + b"\r\n"
                 )
-                await asyncio.sleep(0.12)
+                await asyncio.sleep(frame_interval_sec)
             except Exception as e:
                 logger.warning("[카메라 스트림] 프레임 전송 실패: %s", e)
                 await asyncio.sleep(0.3)
@@ -442,10 +433,8 @@ async def inspect_from_uploaded_file(
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"모델 상태 확인 실패: {e}") from e
 
-    from main import run_inspection_pipeline_from_source_file
-
     mode = _normalize_stage2_mode(stage2Source)
-    background_tasks.add_task(run_inspection_pipeline_from_source_file, save_name, mode)
+    background_tasks.add_task(trigger_file_inspection, save_name, mode)
     return {
         "message": f"업로드 이미지 검사를 시작했습니다: {save_name} (stage2={mode})",
     }
@@ -484,10 +473,8 @@ async def inspect_from_file(
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"모델 상태 확인 실패: {e}") from e
 
-    from main import run_inspection_pipeline_from_source_file
-
     mode = _normalize_stage2_mode(stage2Source)
-    background_tasks.add_task(run_inspection_pipeline_from_source_file, body.path.strip(), mode)
+    background_tasks.add_task(trigger_file_inspection, body.path.strip(), mode)
     return {
         "message": f"파일 검사를 시작했습니다: {body.path.strip()} (stage2={mode})",
     }
@@ -602,6 +589,8 @@ async def auto_inspect_start(
         status = await start_auto_inspection(interval)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    if not status.get("enabled", True):
+        return {"message": "자동 검사는 현재 임시 비활성화 상태입니다. 수동 검사만 사용할 수 있습니다."}
     if before["running"]:
         return {"message": f"자동 검사가 이미 실행 중입니다. (간격: {status['interval_seconds']}초)"}
     return {"message": f"✅ 자동 검사 시작 (간격: {interval}초) — /edge/inspect/auto/stop 으로 중지"}

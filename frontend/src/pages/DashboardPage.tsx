@@ -14,13 +14,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Camera, FolderOpen, Loader2, Radio } from 'lucide-react'
+import { Camera, FolderOpen, Loader2, Radio, Trash2 } from 'lucide-react'
 import StatCardGroup from '@/components/dashboard/StatCard'
 import PassFailChart from '@/components/dashboard/PassFailChart'
 import FailRateTrendChart from '@/components/dashboard/FailRateTrendChart'
 import TrendChart from '@/components/dashboard/TrendChart'
 import InspectionTable from '@/components/inspection/InspectionTable'
 import {
+  deleteAllInspections,
   fetchEdgeDevices,
   inspectImage,
   triggerEdgeInspection,
@@ -36,6 +37,8 @@ export default function DashboardPage() {
 
   /* 최근 15건 — 대시보드 하단 실시간 피드 테이블 */
   const { data: recentLogs = [], isLoading } = useRecentInspections(15)
+
+  /* WebSocket 연결된 Edge 디바이스 목록 (5초마다 갱신) */
   const { data: edgeDevices = [], isLoading: isLoadingEdgeDevices } = useQuery({
     queryKey: ['edge-devices'],
     queryFn: fetchEdgeDevices,
@@ -46,6 +49,7 @@ export default function DashboardPage() {
     [edgeDevices]
   )
 
+  /* 연결된 디바이스가 변경될 때 선택 상태 동기화 */
   useEffect(() => {
     if (selectedDeviceId && connectedDevices.some((device) => device.deviceId === selectedDeviceId)) {
       return
@@ -71,6 +75,7 @@ export default function DashboardPage() {
     },
   })
 
+  // 지금 검사 — Spring WS 로 연결된 Edge(Pi) 디바이스에 명령 전송
   const instantInspectMutation = useMutation({
     mutationFn: triggerEdgeInspection,
     onSuccess: (command) => {
@@ -85,7 +90,17 @@ export default function DashboardPage() {
     },
   })
 
-  // 지금 검사 — Spring Boot WebSocket에 연결된 Edge 디바이스로 명령 전송
+  const deleteMutation = useMutation({
+    mutationFn: deleteAllInspections,
+    onSuccess: () => {
+      setActionMsg({ type: 'ok', text: '검사 이력이 모두 삭제되었습니다.' })
+      invalidateInspections()
+    },
+    onError: (e: Error) => {
+      setActionMsg({ type: 'err', text: e.message || '삭제 실패' })
+    },
+  })
+
   const handleInstantInspectClick = () => {
     if (!selectedDeviceId) {
       setActionMsg({ type: 'err', text: '연결된 Edge 디바이스를 선택해주세요.' })
@@ -93,6 +108,17 @@ export default function DashboardPage() {
     }
     setActionMsg(null)
     instantInspectMutation.mutate(selectedDeviceId)
+  }
+
+  const handleDeleteHistory = () => {
+    if (
+      !window.confirm(
+        '저장된 검사 이력과 결함 기록을 모두 삭제합니다. 계속할까요?'
+      )
+    ) {
+      return
+    }
+    deleteMutation.mutate()
   }
 
   return (
@@ -103,7 +129,7 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-lg font-bold text-white">실시간 대시보드</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            검사 이력·통계 자동 갱신 · 이미지 업로드로 PCB 검사 가능
+            검사 이력·통계 자동 갱신 · 이미지 업로드 또는 Edge 디바이스로 PCB 검사
           </p>
         </div>
         <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0 min-w-[min(100%,280px)]">
@@ -145,6 +171,19 @@ export default function DashboardPage() {
                 <Camera size={16} />
               )}
               지금 검사
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteHistory}
+              disabled={deleteMutation.isPending}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-gray-800 hover:bg-red-950/80 border border-gray-700 hover:border-red-900 text-gray-200 disabled:opacity-50 transition-colors"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Trash2 size={16} />
+              )}
+              이력 전체 삭제
             </button>
           </div>
 

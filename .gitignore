@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 .env
 .venv/
+.venv*/
 venv/
 edge/.env
 edge/weights/*.pt
@@ -29,3 +30,6 @@ frontend/.env.local
 .idea/
 .vscode/
 *.log
+
+# ===== 로컬 개발 전용 (Mac) =====
+docker-compose.edge.mac.yml

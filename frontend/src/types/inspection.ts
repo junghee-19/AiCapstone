@@ -47,8 +47,15 @@ export interface InspectionLog {
   /** 전체 처리 시간 (ms) */
   totalTimeMs: number | null
 
-  /** 캡처 이미지 경로 */
+  /** 백엔드 디스크에 저장된 이미지 파일명 (DB 의 image_path 컬럼 그대로) */
   imagePath: string | null
+
+  /**
+   * 프론트가 바로 사용할 수 있는 이미지 API URL.
+   * 형식: "/api/inspections/{id}/image"
+   * imagePath 가 없으면 null.
+   */
+  imageUrl: string | null
 
   /** 검사 수행 시각 (ISO 8601) */
   inspectedAt: string

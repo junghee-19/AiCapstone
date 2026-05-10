@@ -10,15 +10,7 @@
       "destination": "https://edge-placeholder-update-after-tunnel.invalid/edge/:path*"
     },
     {
-      "source": "/captures/:path*",
-      "destination": "https://edge-placeholder-update-after-tunnel.invalid/captures/:path*"
-    },
-    {
-      "source": "/demo_samples/:path*",
-      "destination": "https://edge-placeholder-update-after-tunnel.invalid/demo_samples/:path*"
-    },
-    {
-      "source": "/((?!api|edge|captures|demo_samples).*)",
+      "source": "/((?!api|edge).*)",
       "destination": "/index.html"
     }
   ]

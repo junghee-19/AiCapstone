@@ -205,42 +205,23 @@ interface DefectViewerProps {
 }
 
 /**
- * 캡처 이미지 URL — 항상 `/captures/...` 상대 경로만 사용한다.
- * `npm run dev` 시 Vite가 `vite.config.ts`의 프록시로 라즈베리파이 :8000에 넘긴다.
- * (브라우저가 Pi에 직접 접속하면 PC 방화벽/망 설정에 따라 실패하기 쉬움)
+ * 캡처 이미지 URL — Spring 백엔드가 제공하는 `imageUrl` 을 그대로 사용한다.
+ * 절대 URL이면 그대로, 상대 경로(`/api/inspections/...`)면 axios baseURL 과 결합되어 fetch 됨.
+ *
+ * 구 이력 (imageUrl 없음, 옛 imagePath 만 존재) 호환은 `/captures/` 경로로 fallback.
  */
-function resolveImageSrc(imagePath: string | null): string | null {
-  if (!imagePath) return null
-  const p = imagePath.replace(/\\/g, '/')
+function resolveImageSrc(log: InspectionLog | null | undefined): string | null {
+  if (!log) return null
+  if (log.imageUrl && log.imageUrl.length > 0) return log.imageUrl
+
+  const legacy = log.imagePath
+  if (!legacy) return null
+  const p = legacy.replace(/\\/g, '/')
   if (p.startsWith('http://') || p.startsWith('https://')) return p
-
-  let relative: string
-  if (p.startsWith('/captures/')) {
-    relative = p
-  } else if (p.startsWith('captures/')) {
-    relative = `/${p}`
-  } else {
-    const capturesIndex = p.indexOf('/captures/')
-    relative = capturesIndex >= 0 ? p.slice(capturesIndex) : p
-  }
-
-  if (relative.startsWith('/')) return relative
-  return relative.startsWith('captures/') ? `/${relative}` : relative
-}
-
-/**
- * 엣지 저장 규칙: `타임스탬프_deskew.jpg` ↔ 원본 `타임스탬프.jpg`
- * 보정 전 이미지 URL을 유추한다. 패턴이 아니면 null (구 이력·정렬 FAIL 등).
- */
-function deriveRawImagePathFromStored(stored: string | null): string | null {
-  if (!stored) return null
-  const p = stored.replace(/\\/g, '/')
-  const last = p.lastIndexOf('/')
-  const dir = last >= 0 ? p.slice(0, last + 1) : ''
-  const file = last >= 0 ? p.slice(last + 1) : p
-  const m = file.match(/^(.+)_deskew(\.[^.]+)$/)
-  if (!m) return null
-  return `${dir}${m[1]}${m[2]}`
+  if (p.startsWith('/captures/')) return p
+  if (p.startsWith('captures/')) return `/${p}`
+  const idx = p.indexOf('/captures/')
+  return idx >= 0 ? p.slice(idx) : p
 }
 
 function PanelBadge({ children }: { children: ReactNode }) {
@@ -253,10 +234,10 @@ function PanelBadge({ children }: { children: ReactNode }) {
 
 export default function DefectViewer({ inspectionId, onClose }: DefectViewerProps) {
   const { data: log, isLoading } = useInspectionById(inspectionId)
-  const deskewSrc = resolveImageSrc(log?.imagePath ?? null)
-  const rawStored = deriveRawImagePathFromStored(log?.imagePath ?? null)
-  const rawSrc = rawStored ? resolveImageSrc(rawStored) : null
-  const showSideBySide = Boolean(rawSrc && deskewSrc)
+  const deskewSrc = resolveImageSrc(log)
+  // raw/deskew 비교 패널은 단일 이미지 업로드 흐름으로 통합되며 더 이상 사용하지 않음.
+  const rawSrc: string | null = null
+  const showSideBySide = false
   const f12DistancePx = log != null ? fiducialDistancePx(log) : null
   const defects = log?.defects ?? []
   const overlayDefects = defects.filter((d) => !d.defectType.startsWith('MISSING:'))
