@@ -46,10 +46,11 @@ public class InspectionRequestDto {
     private String result;
 
     // ── 피듀셜 마크 좌표 (마크를 찾지 못한 경우 null 허용) ───────────────────
-    private Integer fiducial1X;
-    private Integer fiducial1Y;
-    private Integer fiducial2X;
-    private Integer fiducial2Y;
+    // 서브픽셀 정밀도 보존을 위해 Float
+    private Float fiducial1X;
+    private Float fiducial1Y;
+    private Float fiducial2X;
+    private Float fiducial2Y;
 
     /** 피듀셜 YOLO 탐지 신뢰도 (0~1, 선택) */
     private Float fiducial1Confidence;
