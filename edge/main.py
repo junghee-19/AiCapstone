@@ -252,6 +252,24 @@ def _load_board_profiles() -> dict[str, dict[str, Any]]:
     return profiles
 
 
+def _default_single_board_profile() -> tuple[Optional[str], dict[str, Any]]:
+    """단일 보드 운용 시 사용할 기본 보드 프로파일을 반환한다."""
+    if not board_profiles:
+        return None, {}
+
+    candidates = [
+        settings.DEFAULT_BOARD_TYPE,
+        "GT_125A",
+        "G_SERIES",
+    ]
+    for board_type in candidates:
+        if board_type and board_type in board_profiles:
+            return board_type, board_profiles[board_type]
+
+    board_type, profile = next(iter(board_profiles.items()))
+    return board_type, profile
+
+
 def _select_board_type(frame: np.ndarray) -> tuple[Optional[str], float, str]:
     if board_id_detector is None or not board_profiles:
         return None, 0.0, ""
@@ -318,8 +336,8 @@ async def lifespan(app: FastAPI):
     detector = YoloDetector()
     detector.load()
 
+    board_profiles = _load_board_profiles()
     if settings.MULTI_BOARD_ENABLED:
-        board_profiles = _load_board_profiles()
         if board_profiles:
             board_id_detector = YoloDetector(
                 weights_path=settings.BOARD_ID_WEIGHTS_PATH,
@@ -328,6 +346,13 @@ async def lifespan(app: FastAPI):
             board_id_detector.load()
         else:
             logger.warning("[멀티보드] 유효한 profiles가 없어 단일보드 모드로 동작합니다.")
+    elif board_profiles:
+        board_type, profile = _default_single_board_profile()
+        logger.info(
+            "[단일보드] 기본 프로파일 적용: %s, expected_counts=%s",
+            board_type,
+            profile.get("expected_counts") or {},
+        )
 
     # HTTP 송신 세션 준비
     sender = ServerSender()
@@ -497,7 +522,12 @@ def _run_production_vision_pipeline(
         stage2_detector = detector
         selected_board_type: Optional[str] = None
         selected_expected_counts: dict[str, int] = {}
-        if settings.MULTI_BOARD_ENABLED and board_profiles:
+        if not settings.MULTI_BOARD_ENABLED and board_profiles:
+            board_type, profile = _default_single_board_profile()
+            if profile:
+                selected_board_type = board_type
+                selected_expected_counts = profile.get("expected_counts") or {}
+        elif settings.MULTI_BOARD_ENABLED and board_profiles:
             board_type, board_conf, board_cls = _select_board_type(frame)
             if board_type:
                 profile = board_profiles[board_type]
@@ -699,6 +729,8 @@ def _run_production_vision_pipeline(
         missing_payloads: list[DefectPayload] = []
         if selected_expected_counts:
             detected_counts = Counter(d.defect_type.lower() for d in defect_items)
+            if fiducials:
+                detected_counts["fiducial"] = len(fiducials)
             for cls_name, expected_raw in selected_expected_counts.items():
                 try:
                     expected = int(expected_raw)
