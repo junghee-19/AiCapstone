@@ -62,14 +62,6 @@ const WEEKLY_DEMO_DATA_BY_MONTH: Record<string, FailRateTrendPoint[]> = {
   ],
 }
 
-function monthKeyFromPoint(point: FailRateTrendPoint): string {
-  if (/^\d{4}-\d{2}$/.test(point.key)) {
-    return point.key
-  }
-  const matched = point.key.match(/^(\d{4}-\d{2})-w\d+$/)
-  return matched?.[1] ?? point.key
-}
-
 function CustomTooltip({
   active,
   payload,
@@ -102,9 +94,11 @@ export default function FailRateTrendChart() {
 
   const { data: weekData = [], isLoading: weekLoading } = useFailRateTrend('week', 10)
   const usingDemoWeekData = weekData.length === 0
-  const weeklySource = usingDemoWeekData
+  // 백엔드 weeklyKey 가 "2026-W18" (ISO 주차) 라 월 키와 매치되지 않음 — 실제 데이터는 필터 없이 전체 10주 표시.
+  // 데모 모드만 선택된 월의 주차 데이터를 보여준다.
+  const weeklySource: FailRateTrendPoint[] = usingDemoWeekData
     ? (selectedMonth ? (WEEKLY_DEMO_DATA_BY_MONTH[selectedMonth.key] ?? []) : [])
-    : weekData.filter((point) => monthKeyFromPoint(point) === selectedMonth?.key)
+    : weekData
 
   const [selectedWeekKey, setSelectedWeekKey] = useState<string>('')
   const selectedWeek = weeklySource.find((point) => point.key === selectedWeekKey) ?? weeklySource[weeklySource.length - 1]

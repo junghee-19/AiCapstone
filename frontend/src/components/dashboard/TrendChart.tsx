@@ -87,16 +87,6 @@ export default function TrendChart() {
           <span className="px-1 text-sm text-slate-500">PASS</span>
           <span className="px-1 text-sm text-slate-500">FAIL</span>
         </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2 text-xs text-slate-400">
-          <div className="inline-flex items-center gap-1 rounded-lg bg-black/10 px-2 py-1">
-            <span className="h-2 w-2 rounded-full bg-[#5eead4]" />
-            Pass
-          </div>
-          <div className="inline-flex items-center gap-1 rounded-lg bg-black/10 px-2 py-1">
-            <span className="h-2 w-2 rounded-full bg-[#60a5fa]" />
-            Fail
-          </div>
-        </div>
       </div>
 
       <ResponsiveContainer width="100%" height={248}>
