@@ -71,7 +71,12 @@ async def handle_server_message(message: dict[str, Any]) -> dict[str, Any]:
                 device_id=settings.EDGE_DEVICE_ID,
             )
 
-        if command in {"dataset.capture.start", "dataset/capture/start", "/dataset/capture/start"}:
+        if command in {
+            "dataset.capture.start",
+            "dataset.capture.staret",
+            "dataset/capture/start",
+            "/dataset/capture/start",
+        }:
             count = int(payload.get("count", 10))
             interval = float(payload.get("interval", payload.get("intervalSeconds", 3.0)))
             async with _trigger_lock:
