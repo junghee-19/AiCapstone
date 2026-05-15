@@ -31,6 +31,8 @@ public class DatasetImageStorageService {
 
     private static final DateTimeFormatter TS_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    private static final DateTimeFormatter FILE_TS_FMT =
+            DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
     private final Path storageDir;
 
@@ -62,7 +64,7 @@ public class DatasetImageStorageService {
         String safeDeviceId = sanitizeSegment(deviceId, "unknown-device");
         String safeSession = sanitizeSegment(session, "manual");
         String ext = extractExtension(file.getOriginalFilename());
-        String filename = String.format(Locale.ROOT, "%03d%s", index == null ? 1 : index, ext);
+        String filename = buildDatasetFilename(safeSession, index, ext);
 
         Path targetDir = storageDir.resolve(safeDeviceId).resolve(safeSession).normalize();
         Path target = targetDir.resolve(filename).normalize();
@@ -70,6 +72,7 @@ public class DatasetImageStorageService {
 
         try {
             Files.createDirectories(targetDir);
+            target = nextAvailableTarget(target);
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
             log.info("[데이터셋이미지] 저장: {}", target);
             return toDto(safeDeviceId, safeSession, target);
@@ -189,6 +192,34 @@ public class DatasetImageStorageService {
     private static String sanitizeFilename(String value) {
         String v = value == null || value.isBlank() ? "image.jpg" : value.trim();
         return Paths.get(v).getFileName().toString().replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    private static String buildDatasetFilename(String safeSession, Integer index, String ext) {
+        String timestamp = safeSession.matches("\\d{8}_\\d{6}.*")
+                ? safeSession
+                : FILE_TS_FMT.format(java.time.LocalDateTime.now());
+        int safeIndex = index == null ? 1 : Math.max(1, index);
+        return String.format(Locale.ROOT, "%s_%03d%s", timestamp, safeIndex, ext);
+    }
+
+    private static Path nextAvailableTarget(Path target) {
+        if (!Files.exists(target)) {
+            return target;
+        }
+
+        String filename = target.getFileName().toString();
+        int dot = filename.lastIndexOf('.');
+        String stem = dot > 0 ? filename.substring(0, dot) : filename;
+        String ext = dot > 0 ? filename.substring(dot) : "";
+        Path parent = target.getParent();
+
+        for (int suffix = 1; suffix < 10_000; suffix++) {
+            Path candidate = parent.resolve(String.format(Locale.ROOT, "%s-%d%s", stem, suffix, ext));
+            if (!Files.exists(candidate)) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("사용 가능한 데이터셋 이미지 파일명을 찾지 못했습니다: " + target);
     }
 
     private static String extractExtension(String original) {

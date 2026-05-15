@@ -62,9 +62,9 @@ async def capture_labeling_images(
 
     for index in range(safe_count):
         _frame, path = await asyncio.to_thread(camera.capture_and_save, str(session_dir))
-        image_path = Path(path)
+        image_path = _rename_capture_for_dataset(Path(path), session_name, index + 1)
         saved.append(image_path.name)
-        logger.info("[라벨링캡처] %d/%d 저장: %s", index + 1, safe_count, path)
+        logger.info("[라벨링캡처] %d/%d 저장: %s", index + 1, safe_count, image_path)
         uploaded.append(
             await asyncio.to_thread(
                 _upload_dataset_image,
@@ -110,3 +110,12 @@ def _upload_dataset_image(image_path: Path, session: str, index: int) -> dict[st
     response.raise_for_status()
     logger.info("[라벨링캡처] 서버 업로드 완료: %s (%s)", image_path.name, response.status_code)
     return response.json()
+
+
+def _rename_capture_for_dataset(image_path: Path, session: str, index: int) -> Path:
+    ext = image_path.suffix.lower() if image_path.suffix else ".jpg"
+    target = image_path.with_name(f"{session}_{index:03d}{ext}")
+    if image_path == target:
+        return image_path
+    image_path.replace(target)
+    return target
