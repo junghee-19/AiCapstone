@@ -51,6 +51,15 @@ export interface EdgeCommandMessage {
   payload?: Record<string, unknown>
 }
 
+export interface DatasetImage {
+  deviceId: string
+  session: string
+  filename: string
+  sizeBytes: number
+  createdAt: string
+  downloadUrl: string
+}
+
 export const fetchAllInspections = async (): Promise<InspectionLog[]> => {
   const { data } = await apiClient.get<InspectionLog[]>('/inspections')
   return data
@@ -120,6 +129,24 @@ export const triggerEdgeInspection = async (deviceId: string): Promise<EdgeComma
   const { data } = await apiClient.post<EdgeCommandMessage>(
     `/edge/${encodeURIComponent(deviceId)}/inspect/trigger`
   )
+  return data
+}
+
+export const triggerDatasetCapture = async (
+  deviceId: string,
+  count = 10,
+  interval = 3
+): Promise<EdgeCommandMessage> => {
+  const { data } = await apiClient.post<EdgeCommandMessage>(
+    `/edge/${encodeURIComponent(deviceId)}/dataset/capture/start`,
+    null,
+    { params: { count, interval } }
+  )
+  return data
+}
+
+export const fetchDatasetImages = async (): Promise<DatasetImage[]> => {
+  const { data } = await apiClient.get<DatasetImage[]>('/dataset-images')
   return data
 }
 

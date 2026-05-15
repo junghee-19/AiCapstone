@@ -29,12 +29,15 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: your_password
       INSPECTION_IMAGE_DIR: /var/inspection-images
+      DATASET_IMAGE_DIR: /var/dataset-images
       TZ: Asia/Seoul
     ports:
       - "8080:8080"
     volumes:
       # 검사 캡처 이미지 — 컨테이너 재시작에도 유지되도록 named volume
       - inspection_images:/var/inspection-images
+      # 라벨링/학습용 이미지 — 검사 이력과 별도 보관
+      - dataset_images:/var/dataset-images
 
   frontend:
     build:
@@ -53,3 +56,4 @@ services:
 volumes:
   mysql_data:
   inspection_images:
+  dataset_images:

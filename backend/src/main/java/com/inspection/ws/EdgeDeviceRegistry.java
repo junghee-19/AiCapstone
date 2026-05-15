@@ -84,7 +84,9 @@ public class EdgeDeviceRegistry {
             if (payload instanceof Map<?, ?> rawPayload) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> status = (Map<String, Object>) rawPayload;
-                if ("inspect.auto.status".equals(message.get("type")) || "edge.connected".equals(message.get("type"))) {
+                if ("inspect.auto.status".equals(message.get("type"))
+                        || "dataset.capture.result".equals(message.get("type"))
+                        || "edge.connected".equals(message.get("type"))) {
                     device.updateStatus(status);
                     return;
                 }
