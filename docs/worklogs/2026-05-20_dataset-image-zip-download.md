@@ -20,14 +20,19 @@
 ## Verification result
 - Passed: `npm run build` in `frontend`.
 - Not run: `mvn test` in `backend` because `mvn` is not installed and no Maven wrapper exists in the repository.
+- Re-test with frontend dev server: list API returned 100 dataset images.
+- Re-test with frontend dev server: single-image ZIP and some smaller ZIP requests were valid.
+- Re-test with frontend dev server: full 100-image ZIP response was truncated before the central directory, so the downloaded file was not a valid ZIP.
 
 ## Decisions made
 - Used server-side ZIP streaming so multiple selected images download as one compressed file.
 - Preserved the original storage path validation by reusing dataset image path resolution in the storage service.
 - Kept row-level single image download links unchanged.
+- Set ZIP compression to `Deflater.BEST_SPEED` because source images are already compressed and full archive streaming was too slow/unreliable with the default compression level.
 
 ## Issues
 - Backend test execution requires Maven or a Maven wrapper.
+- The currently running backend must be restarted or redeployed before the `BEST_SPEED` archive change can be re-tested.
 
 ## Next steps
 - Run backend tests once Maven is available.

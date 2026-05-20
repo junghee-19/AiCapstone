@@ -17,6 +17,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -103,6 +104,7 @@ public class DatasetImageController {
             List<DatasetImageArchiveRequest.Item> images
     ) throws IOException {
         try (ZipOutputStream zip = new ZipOutputStream(outputStream)) {
+            zip.setLevel(Deflater.BEST_SPEED);
             for (DatasetImageArchiveRequest.Item image : images) {
                 Path path = datasetImageStorageService.resolveImagePath(
                         image.deviceId(),
