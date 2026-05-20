@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Optional
 
+from config.settings import settings
+
 
 def make_event(
     event_type: str,
@@ -37,6 +39,10 @@ def packet_summary(packet: Any) -> dict[str, Any]:
         "inferenceTimeMs": packet.inference_time_ms,
         "imagePath": packet.image_path,
         "defectCount": len(packet.defects),
+        "thresholds": {
+            "fiducialConfidence": settings.effective_fiducial_confidence(),
+            "defectConfidence": settings.effective_defect_confidence(),
+        },
         "inspectedAt": packet.inspected_at.isoformat(),
     }
 

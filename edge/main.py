@@ -184,6 +184,10 @@ async def _wait_for_centered_stable_pcb_frame() -> tuple[np.ndarray, str, list, 
                 stable_since = None
 
             last_signature = signature
+        elif alignment.fiducial1 is not None:
+            image_path = _save_frame(frame)
+            logger.info("[capture-wait] one fiducial detected; capturing for raw-frame inspection")
+            return frame, image_path, fiducials, fiducial_ms, alignment
         else:
             if stable_since is not None:
                 logger.info("[캡처대기] 피듀셜 부족으로 안정 상태 해제")
@@ -611,7 +615,7 @@ def _run_production_vision_pipeline(
         if alignment.fiducial2:
             f2x, f2y = alignment.fiducial2.center_x, alignment.fiducial2.center_y
 
-        if len(fiducials) < 2:
+        if len(fiducials) < 1:
             logger.info("[파이프라인] PCB/피듀셜 미검출 → SKIPPED, Stage 2 건너뜀")
             f1c, f2c = _fiducial_confidences(alignment)
             packet = _build_packet(
@@ -627,7 +631,7 @@ def _run_production_vision_pipeline(
             _finalize(packet)
             return packet
 
-        if not alignment.is_aligned:
+        if not alignment.is_aligned and len(fiducials) >= 2:
             logger.warning("[파이프라인] 피듀셜/기울기 조건 불충족 → FAIL, Stage 2 건너뜀")
             f1c, f2c = _fiducial_confidences(alignment)
             packet = _build_packet(
@@ -657,6 +661,9 @@ def _run_production_vision_pipeline(
         # 정합 전 피듀셜 중심을 보존한다.
         pre_align_f1x, pre_align_f1y = f1x, f1y
         pre_align_f2x, pre_align_f2y = f2x, f2y
+        if alignment.fiducial1 is not None and alignment.fiducial2 is None:
+            logger.warning("[pipeline] only one fiducial detected; using raw full frame for Stage 2")
+            stage2_mode = "raw"
 
         logger.info("[파이프라인] STEP 2-A′ — 좌표 정합 (translation/rotation/scale)")
         aligned_frame, alignment, _m = align_image_to_reference_by_fiducials(
@@ -883,7 +890,7 @@ def run_inspection_pipeline_when_pcb_present() -> bool:
     stage1 = fiducial_detector if settings.USE_SEPARATE_MODELS else detector
     fiducials, fiducial_ms = stage1.detect_fiducials(frame)
 
-    if len(fiducials) < 2:
+    if len(fiducials) < 1:
         logger.debug("[자동검사] PCB 미감지 — 피듀셜 %d개", len(fiducials))
         return False
 

@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Any, Optional
 
+from config.settings import settings
 from models.schemas import InspectionPacket
 from runtime.touchscreen_state import get_touchscreen_state
 
@@ -57,6 +58,10 @@ def _packet_to_touchscreen_payload(packet: InspectionPacket) -> dict[str, Any]:
         "result": packet.result.value if hasattr(packet.result, "value") else str(packet.result),
         "defects": defects,
         "fiducials": fiducials,
+        "thresholds": {
+            "fiducialConfidence": settings.effective_fiducial_confidence(),
+            "defectConfidence": settings.effective_defect_confidence(),
+        },
         "imageUrl": image_url,
         "inspectedAt": packet.inspected_at.isoformat() if packet.inspected_at else None,
     }
@@ -72,6 +77,7 @@ async def _notify_result(packet: InspectionPacket) -> None:
         image_url=payload["imageUrl"],
         inspected_at=payload["inspectedAt"],
         fiducials=payload["fiducials"],
+        thresholds=payload["thresholds"],
     )
 
 
