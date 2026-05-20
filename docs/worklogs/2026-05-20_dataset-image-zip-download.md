@@ -23,6 +23,7 @@
 - Re-test with frontend dev server: list API returned 100 dataset images.
 - Re-test with frontend dev server: single-image ZIP and some smaller ZIP requests were valid.
 - Re-test with frontend dev server: full 100-image ZIP response was truncated before the central directory, so the downloaded file was not a valid ZIP.
+- Re-test after server update: 1-image ZIP valid, 10-image ZIP valid, 20-image ZIP valid, but 100-image ZIP still downloaded as a truncated invalid ZIP.
 
 ## Decisions made
 - Used server-side ZIP streaming so multiple selected images download as one compressed file.
@@ -33,6 +34,7 @@
 ## Issues
 - Backend test execution requires Maven or a Maven wrapper.
 - The currently running backend must be restarted or redeployed before the `BEST_SPEED` archive change can be re-tested.
+- Full archive download still needs a more robust server-side response strategy, such as writing the archive to a temporary file first and returning it with a content length instead of live streaming.
 
 ## Next steps
 - Run backend tests once Maven is available.
