@@ -150,6 +150,19 @@ export const fetchDatasetImages = async (): Promise<DatasetImage[]> => {
   return data
 }
 
+export const downloadDatasetImagesArchive = async (images: DatasetImage[]): Promise<Blob> => {
+  const { data } = await apiClient.post<Blob>(
+    '/dataset-images/archive',
+    {
+      images: images.map(({ deviceId, session, filename }) => ({ deviceId, session, filename })),
+    },
+    {
+      responseType: 'blob',
+    }
+  )
+  return data
+}
+
 export const deleteDatasetImage = async (image: DatasetImage): Promise<void> => {
   await apiClient.delete(
     `/dataset-images/${encodeURIComponent(image.deviceId)}/${encodeURIComponent(image.session)}/${encodeURIComponent(image.filename)}`

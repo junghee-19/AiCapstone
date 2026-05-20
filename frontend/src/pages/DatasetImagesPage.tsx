@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckSquare, Download, ImageDown, RefreshCw, Square, Trash2 } from 'lucide-react'
-import { deleteDatasetImage, fetchDatasetImages, type DatasetImage } from '@/api/inspectionApi'
+import {
+  deleteDatasetImage,
+  downloadDatasetImagesArchive,
+  fetchDatasetImages,
+  type DatasetImage,
+} from '@/api/inspectionApi'
 
 function imageKey(image: DatasetImage): string {
   return `${image.deviceId}/${image.session}/${image.filename}`
@@ -29,14 +34,16 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)}MB`
 }
 
-function downloadOne(image: DatasetImage) {
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
-  anchor.href = image.downloadUrl
-  anchor.download = image.filename
+  anchor.href = url
+  anchor.download = filename
   anchor.rel = 'noopener'
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
+  URL.revokeObjectURL(url)
 }
 
 export default function DatasetImagesPage() {
@@ -79,6 +86,13 @@ export default function DatasetImagesPage() {
     },
   })
 
+  const downloadArchiveM = useMutation({
+    mutationFn: downloadDatasetImagesArchive,
+    onSuccess: (blob) => {
+      downloadBlob(blob, `dataset-images-${new Date().toISOString().slice(0, 10)}.zip`)
+    },
+  })
+
   const toggleOne = (key: string) => {
     setSelectedKeys((prev) => {
       const next = new Set(prev)
@@ -97,9 +111,8 @@ export default function DatasetImagesPage() {
   }
 
   const downloadSelected = () => {
-    selectedImages.forEach((image, index) => {
-      window.setTimeout(() => downloadOne(image), index * 250)
-    })
+    if (selectedImages.length === 0 || downloadArchiveM.isPending) return
+    downloadArchiveM.mutate(selectedImages)
   }
 
   const deleteSelected = () => {
@@ -149,7 +162,7 @@ export default function DatasetImagesPage() {
           </button>
           <button
             onClick={downloadSelected}
-            disabled={selectedImages.length === 0}
+            disabled={selectedImages.length === 0 || downloadArchiveM.isPending}
             className="inline-flex items-center gap-2 rounded-md border border-indigo-500/60 bg-indigo-500/15 px-3 py-2 text-xs font-semibold text-indigo-100 transition-colors hover:bg-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-45"
           >
             <Download size={14} />

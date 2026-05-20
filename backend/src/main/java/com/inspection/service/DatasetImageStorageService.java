@@ -99,6 +99,15 @@ public class DatasetImageStorageService {
     }
 
     public Resource load(String deviceId, String session, String filename) {
+        Path target = resolveImagePath(deviceId, session, filename);
+        try {
+            return new UrlResource(target.toUri());
+        } catch (MalformedURLException e) {
+            throw new RuntimeException("데이터셋 이미지 URL 변환 실패: " + filename, e);
+        }
+    }
+
+    public Path resolveImagePath(String deviceId, String session, String filename) {
         String safeDeviceId = sanitizeSegment(deviceId, "unknown-device");
         String safeSession = sanitizeSegment(session, "manual");
         String safeFilename = sanitizeFilename(filename);
@@ -107,11 +116,7 @@ public class DatasetImageStorageService {
         if (!Files.exists(target) || !Files.isRegularFile(target)) {
             throw new IllegalArgumentException("데이터셋 이미지 없음: " + filename);
         }
-        try {
-            return new UrlResource(target.toUri());
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("데이터셋 이미지 URL 변환 실패: " + filename, e);
-        }
+        return target;
     }
 
     public void delete(String deviceId, String session, String filename) {
