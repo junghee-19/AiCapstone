@@ -216,6 +216,7 @@ board_detector_cache: dict[str, YoloDetector] = {}
 ws_stop_event: Optional[asyncio.Event] = None
 ws_task: Optional[asyncio.Task[None]] = None
 _patchcore_detector: Any = None  # inference.anomaly_patchcore.PatchCoreDetector — lazy load
+_defect_detector: Optional[YoloDetector] = None  # metal_damage YOLO — lazy load
 
 
 def _resolve_edge_relative_path(path_like: str) -> Path:
@@ -812,10 +813,39 @@ def _run_production_vision_pipeline(
                         result["score"],
                     )
 
+        # ── Metal Damage (까짐) YOLO 검출 ─────────────────────────────────────
+        # Copy-Paste 증강으로 학습된 별도 단일 클래스 모델. 정렬된 이미지에서 추론.
+        damage_payloads: list[DefectPayload] = []
+        if settings.DEFECT_MODEL_ENABLED:
+            global _defect_detector
+            if _defect_detector is None:
+                _defect_detector = YoloDetector(
+                    weights_path=settings.DEFECT_MODEL_PATH,
+                    confidence_threshold=settings.DEFECT_MODEL_CONFIDENCE,
+                )
+                _defect_detector.load()
+            damage_items, damage_ms = _defect_detector.detect(
+                roi, conf=settings.DEFECT_MODEL_CONFIDENCE,
+            )
+            for d in damage_items:
+                damage_payloads.append(DefectPayload(
+                    defect_type=d.defect_type,
+                    confidence=d.confidence,
+                    bbox_x=d.bbox.x + roi_x,
+                    bbox_y=d.bbox.y + roi_y,
+                    bbox_width=d.bbox.width,
+                    bbox_height=d.bbox.height,
+                ))
+            if damage_payloads:
+                logger.warning(
+                    "[결함모델] metal_damage %d개 검출 — FAIL 처리 (추론 %dms)",
+                    len(damage_payloads), damage_ms,
+                )
+
         f1c, f2c = _fiducial_confidences(alignment)
-        if missing_payloads or anomaly_payloads:
+        if missing_payloads or anomaly_payloads or damage_payloads:
             final_result = InspectionResult.FAIL
-        all_defects = defect_payloads + missing_payloads + anomaly_payloads
+        all_defects = defect_payloads + missing_payloads + anomaly_payloads + damage_payloads
         packet = _build_packet(
             result=final_result,
             f1x=f1x, f1y=f1y, f2x=f2x, f2y=f2y,

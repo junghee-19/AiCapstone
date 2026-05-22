@@ -6,6 +6,7 @@ __pycache__/
 .venv/
 .venv*/
 venv/
+edge/env/
 edge/.env
 edge/weights/*.pt
 edge/weights/*.onnx

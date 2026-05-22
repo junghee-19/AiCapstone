@@ -130,6 +130,12 @@ class Settings(BaseSettings):
     # 변환된 예상 위치 ± 이 거리 안에 같은 클래스 검출이 있어야 OK (px)
     REFERENCE_MATCH_TOLERANCE_PX: float = Field(default=80.0, gt=0.0)
 
+    # ── Metal Damage (까짐) YOLO 검출 ────────────────────────────────────────
+    # Copy-Paste 증강 학습한 별도 모델. 활성화 시 Stage2 후 추론 → 검출 시 FAIL
+    DEFECT_MODEL_ENABLED: bool = Field(default=False)
+    DEFECT_MODEL_PATH: str = Field(default="weights/best_defect.pt")
+    DEFECT_MODEL_CONFIDENCE: float = Field(default=0.5, ge=0.0, le=1.0)
+
     # ── PatchCore Anomaly Detection ──────────────────────────────────────────
     # 활성화 + 모델/coreset 파일 존재 시 Stage2 후 추론 → 임계값 초과 시 FAIL
     PATCHCORE_ENABLED: bool = Field(default=False)
