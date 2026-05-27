@@ -45,13 +45,13 @@ function FilterButton({ label, value, current, count, onClick }: FilterButtonPro
         'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
         active
           ? 'bg-indigo-600 text-white'
-          : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+          : 'bg-Black-4% text-Black-40% hover:text-Black-100% hover:bg-Black-10%'
       )}
     >
       {label}
       <span className={clsx(
         'px-1.5 py-0.5 rounded-full text-xs',
-        active ? 'bg-white/20' : 'bg-gray-700'
+        active ? 'bg-white/30' : 'bg-Black-10%'
       )}>
         {count}
       </span>
@@ -120,7 +120,6 @@ export default function HistoryPage() {
   /* 필터 결과 미니 통계 */
   const passCount = filteredLogs.filter((l) => l.result === 'PASS').length
   const failCount = filteredLogs.filter((l) => l.result === 'FAIL').length
-  const skippedCount = filteredLogs.filter((l) => l.result === 'SKIPPED').length
   const inspectedCount = passCount + failCount
 
   return (
@@ -129,14 +128,14 @@ export default function HistoryPage() {
       {/* 페이지 제목 */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-white">검사 이력</h2>
-          <p className="text-xs text-gray-500 mt-0.5">전체 검사 기록 조회 및 결함 상세 확인</p>
+          <h2 className="text-lg font-bold text-Black-100%">검사 이력</h2>
+          <p className="text-xs text-Black-40% mt-0.5">전체 검사 기록 조회 및 결함 상세 확인</p>
         </div>
 
         {/* CSV 내보내기 버튼 */}
         <button
           onClick={() => downloadCsv(filteredLogs)}
-          className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg text-xs font-medium transition-colors"
+          className="flex items-center gap-2 px-3 py-2 bg-Black-4% hover:bg-Black-10% text-Black-80% hover:text-Black-100% rounded-lg text-xs font-medium transition-colors"
         >
           <Download size={14} />
           CSV 내보내기
@@ -144,33 +143,33 @@ export default function HistoryPage() {
       </div>
 
       {/* 필터 영역 */}
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+      <div className="bg-white border border-Black-10% rounded-xl p-4">
         <div className="flex flex-wrap gap-4 items-end">
 
           {/* 날짜 범위 필터 */}
           <div className="flex items-center gap-2">
-            <Filter size={14} className="text-gray-500 shrink-0" />
+            <Filter size={14} className="text-Black-40% shrink-0" />
             <div className="flex items-center gap-2">
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-500">시작일</label>
+                <label className="text-xs text-Black-40%">시작일</label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                   max={dateTo || today}
-                  className="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="bg-Black-4% border border-Black-10% text-Black-80% text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
-              <span className="text-gray-600 text-sm mt-4">~</span>
+              <span className="text-Black-40% text-sm mt-4">~</span>
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-500">종료일</label>
+                <label className="text-xs text-Black-40%">종료일</label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                   min={dateFrom}
                   max={today}
-                  className="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="bg-Black-4% border border-Black-10% text-Black-80% text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -178,32 +177,28 @@ export default function HistoryPage() {
 
           {/* 결과 필터 버튼 그룹 */}
           <div className="flex items-center gap-2 ml-auto">
-            <Search size={14} className="text-gray-500" />
+            <Search size={14} className="text-Black-40%" />
             <FilterButton label="전체"  value="ALL"  current={resultFilter} count={allLogs.length}                        onClick={setResultFilter} />
             <FilterButton label="PASS"  value="PASS" current={resultFilter} count={allLogs.filter(l => l.result==='PASS').length} onClick={setResultFilter} />
             <FilterButton label="FAIL"  value="FAIL" current={resultFilter} count={allLogs.filter(l => l.result==='FAIL').length} onClick={setResultFilter} />
-            <FilterButton label="SKIPPED" value="SKIPPED" current={resultFilter} count={allLogs.filter(l => l.result==='SKIPPED').length} onClick={setResultFilter} />
           </div>
         </div>
       </div>
 
       {/* 필터 결과 미니 통계 바 */}
-      <div className="flex items-center gap-4 text-xs text-gray-500">
+      <div className="flex items-center gap-4 text-xs text-Black-40%">
         <span>
-          조회 결과: <span className="text-white font-semibold">{filteredLogs.length}건</span>
+          조회 결과: <span className="text-Black-100% font-semibold">{filteredLogs.length}건</span>
         </span>
         <span>
-          합격: <span className="text-green-400 font-semibold">{passCount}건</span>
+          합격: <span className="text-emerald-600 font-semibold">{passCount}건</span>
         </span>
         <span>
-          불합격: <span className="text-red-400 font-semibold">{failCount}건</span>
-        </span>
-        <span>
-          생략: <span className="text-slate-300 font-semibold">{skippedCount}건</span>
+          불합격: <span className="text-red-600 font-semibold">{failCount}건</span>
         </span>
         {inspectedCount > 0 && (
           <span>
-            불량률: <span className="text-yellow-400 font-semibold">
+            불량률: <span className="text-yellow-600 font-semibold">
               {((failCount / inspectedCount) * 100).toFixed(2)}%
             </span>
           </span>
