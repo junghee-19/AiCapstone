@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { BOARD_REFERENCES, toCountRows } from '@/config/boardReference'
+import { DEFECT_COLOR } from '@/types/inspection'
 
 export default function BoardReferencePage() {
   const [selectedKey, setSelectedKey] = useState<string>(BOARD_REFERENCES[0]?.key ?? '')
@@ -24,8 +25,8 @@ export default function BoardReferencePage() {
     <div className="h-full overflow-auto p-6 space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-Black-100%">기판 기준 정보</h1>
-          <p className="text-xs text-Black-40% mt-1">
+          <h1 className="text-lg font-semibold text-Black-100% mb-2">기판 기준 정보</h1>
+          <p className="text-xs text-Black-40% mt-1 pb-7">
             정상 라벨링 기준 이미지와 클래스 정상 개수를 보드별로 확인합니다.
           </p>
         </div>
@@ -50,7 +51,7 @@ export default function BoardReferencePage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
         <section className="xl:col-span-3 rounded-xl bg-white border border-Black-10% p-3">
-          <h2 className="text-sm text-Black-80% font-semibold mb-3">정상 라벨링 기준 이미지</h2>
+          <h2 className="text-l text-Black-80% font-bold mb-3 ml-2 pt-3 pb-3">정상 라벨링 기준 이미지</h2>
           {!imageError ? (
             <img
               src={selected.imageUrl}
@@ -66,14 +67,19 @@ export default function BoardReferencePage() {
         </section>
 
         <section className="xl:col-span-2 rounded-xl bg-white border border-Black-10% p-3">
-          <h2 className="text-sm text-Black-80% font-semibold mb-3">정상 클래스 개수</h2>
+          <h2 className="text-l text-Black-80% font-bold mb-3 ml-2 pb-3 pt-3">정상 클래스 개수</h2>
           <div className="space-y-2">
             {rows.map((row) => (
               <div
                 key={row.cls}
                 className="flex items-center justify-between rounded-md border border-Black-10% bg-Background-1/60 px-3 py-2"
               >
-                <span className="text-sm text-Black-100%">{row.label}</span>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: DEFECT_COLOR[row.cls] ?? '#1C1C1C' }}
+                >
+                  {row.label}
+                </span>
                 <span className="text-sm font-mono text-Black-100%">X{row.count}</span>
               </div>
             ))}

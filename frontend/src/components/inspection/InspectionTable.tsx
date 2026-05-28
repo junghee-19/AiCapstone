@@ -253,7 +253,7 @@ export default function InspectionTable({
 
                       {/* 피듀셜 중심 좌표 (deskew 후 좌표계) */}
                       <td
-                        className="px-4 py-3 text-[11px] text-Black-40% font-mono leading-snug max-w-[14rem]"
+                        className="px-4 py-3 text-[11px] text-Black-100% font-mono leading-snug max-w-[14rem]"
                         title="보정 이미지 기준 피듀셜 중심 (px)"
                       >
                         {formatFiducialCells(log)}

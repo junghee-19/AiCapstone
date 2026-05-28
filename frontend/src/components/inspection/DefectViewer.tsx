@@ -632,11 +632,11 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-/** 피듀셜 중심 좌표 — 패널에서 가장 눈에 띄게 */
+/** 피듀셜 중심 좌표 — 패널에서 가장 눈에 띄게 (라이트 톤, 반전) */
 function MetaCoordRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg border-2 border-sky-600/50 bg-slate-950 px-3 py-2.5 shadow-lg shadow-sky-950/40">
-      <dt className="text-[11px] font-semibold text-sky-200/90 tracking-wide">{label}</dt>
+    <div className="flex flex-col gap-1.5 rounded-lg border border-Black-10% bg-white px-3 py-2.5 shadow-sm">
+      <dt className="text-[11px] font-semibold text-sky-600 tracking-wide">{label}</dt>
       <dd className="text-base sm:text-lg font-bold font-mono text-Black-100% tabular-nums tracking-tight break-all">
         {value}
       </dd>
