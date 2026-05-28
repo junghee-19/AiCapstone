@@ -51,6 +51,15 @@ export interface EdgeCommandMessage {
   payload?: Record<string, unknown>
 }
 
+export interface DatasetImage {
+  deviceId: string
+  session: string
+  filename: string
+  sizeBytes: number
+  createdAt: string
+  downloadUrl: string
+}
+
 export const fetchAllInspections = async (): Promise<InspectionLog[]> => {
   const { data } = await apiClient.get<InspectionLog[]>('/inspections')
   return data
@@ -100,6 +109,17 @@ export const deleteAllInspections = async (): Promise<void> => {
   await apiClient.delete('/inspections')
 }
 
+export const deleteInspectionsByPeriod = async (
+  from: string,
+  to: string
+): Promise<{ deletedCount: number }> => {
+  const { data } = await apiClient.delete<{ deletedCount: number }>(
+    '/inspections/period',
+    { params: { from, to } }
+  )
+  return data
+}
+
 export const fetchEdgeDevices = async (): Promise<EdgeDevice[]> => {
   const { data } = await apiClient.get<EdgeDevice[]>('/edge/devices')
   return data
@@ -110,6 +130,43 @@ export const triggerEdgeInspection = async (deviceId: string): Promise<EdgeComma
     `/edge/${encodeURIComponent(deviceId)}/inspect/trigger`
   )
   return data
+}
+
+export const triggerDatasetCapture = async (
+  deviceId: string,
+  count = 10,
+  interval = 3
+): Promise<EdgeCommandMessage> => {
+  const { data } = await apiClient.post<EdgeCommandMessage>(
+    `/edge/${encodeURIComponent(deviceId)}/dataset/capture/start`,
+    null,
+    { params: { count, interval } }
+  )
+  return data
+}
+
+export const fetchDatasetImages = async (): Promise<DatasetImage[]> => {
+  const { data } = await apiClient.get<DatasetImage[]>('/dataset-images')
+  return data
+}
+
+export const downloadDatasetImagesArchive = async (images: DatasetImage[]): Promise<Blob> => {
+  const { data } = await apiClient.post<Blob>(
+    '/dataset-images/archive',
+    {
+      images: images.map(({ deviceId, session, filename }) => ({ deviceId, session, filename })),
+    },
+    {
+      responseType: 'blob',
+    }
+  )
+  return data
+}
+
+export const deleteDatasetImage = async (image: DatasetImage): Promise<void> => {
+  await apiClient.delete(
+    `/dataset-images/${encodeURIComponent(image.deviceId)}/${encodeURIComponent(image.session)}/${encodeURIComponent(image.filename)}`
+  )
 }
 
 /**

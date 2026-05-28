@@ -18,17 +18,14 @@ import Sidebar from '@/components/common/Sidebar'
 import DashboardPage from '@/pages/DashboardPage'
 import HistoryPage from '@/pages/HistoryPage'
 import BoardReferencePage from '@/pages/BoardReferencePage'
-
-/** 아직 구현되지 않은 경로를 위한 플레이스홀더 페이지 */
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <p className="text-gray-500 text-sm">{title} — 준비 중</p>
-    </div>
-  )
-}
+import DatasetImagesPage from '@/pages/DatasetImagesPage'
+import SettingsPage from '@/pages/SettingsPage'
+import { useTheme } from '@/hooks/useTheme'
 
 export default function App() {
+  /* 라이트/다크 테마를 전체 화면에 한 번 적용 */
+  useTheme()
+
   return (
     /* 전체 화면을 채우는 flex 컨테이너 */
     <div className="flex flex-col h-screen bg-gray-950 text-gray-100 overflow-hidden">
@@ -54,8 +51,11 @@ export default function App() {
             {/* 보드 기준(정상 이미지/기대 개수) */}
             <Route path="/board-reference" element={<BoardReferencePage />} />
 
-            {/* 설정 (플레이스홀더) */}
-            <Route path="/settings" element={<PlaceholderPage title="설정" />} />
+            {/* 라벨링 데이터셋 이미지 */}
+            <Route path="/dataset-images" element={<DatasetImagesPage />} />
+
+            {/* 설정 */}
+            <Route path="/settings" element={<SettingsPage />} />
 
             {/* 정의되지 않은 경로는 루트로 리다이렉트 */}
             <Route path="*"         element={<Navigate to="/" replace />} />

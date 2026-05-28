@@ -6,7 +6,9 @@ import logging
 from typing import Any
 
 from config.settings import settings
+from runtime.dataset_capture import capture_labeling_images
 from runtime.inspection_control import (
+    _trigger_lock,
     auto_status,
     start_auto_inspection,
     stop_auto_inspection,
@@ -66,6 +68,23 @@ async def handle_server_message(message: dict[str, Any]) -> dict[str, Any]:
                 "inspect.auto.status",
                 request_id=request_id,
                 payload=auto_status(),
+                device_id=settings.EDGE_DEVICE_ID,
+            )
+
+        if command in {
+            "dataset.capture.start",
+            "dataset.capture.staret",
+            "dataset/capture/start",
+            "/dataset/capture/start",
+        }:
+            count = int(payload.get("count", 10))
+            interval = float(payload.get("interval", payload.get("intervalSeconds", 3.0)))
+            async with _trigger_lock:
+                result = await capture_labeling_images(count=count, interval_seconds=interval)
+            return make_event(
+                "dataset.capture.result",
+                request_id=request_id,
+                payload=result,
                 device_id=settings.EDGE_DEVICE_ID,
             )
 

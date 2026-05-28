@@ -3,7 +3,7 @@
  */
 
 import { useRef, useState, useEffect, type ReactNode } from 'react'
-import { X, ImageOff, AlertCircle } from 'lucide-react'
+import { X, ImageOff, AlertCircle, Download } from 'lucide-react'
 import { useInspectionById } from '@/hooks/useInspectionData'
 import type { InspectionLog } from '@/types/inspection'
 import { defectDisplayName, defectColor } from '@/types/inspection'
@@ -222,6 +222,16 @@ function resolveImageSrc(log: InspectionLog | null | undefined): string | null {
   if (p.startsWith('captures/')) return `/${p}`
   const idx = p.indexOf('/captures/')
   return idx >= 0 ? p.slice(idx) : p
+}
+
+function imageDownloadName(log: InspectionLog): string {
+  const rawName = log.imagePath?.replace(/\\/g, '/').split('/').pop()
+  if (rawName && rawName.includes('.')) return rawName
+
+  const inspectedAt = log.inspectedAt
+    ? new Date(log.inspectedAt).toISOString().replace(/[:.]/g, '-')
+    : `inspection-${log.id}`
+  return `inspection-${log.id}-${inspectedAt}.jpg`
 }
 
 function PanelBadge({ children }: { children: ReactNode }) {
@@ -501,6 +511,17 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               검사 정보
             </h3>
+
+            {deskewSrc && !deskewLoadError && (
+              <a
+                href={deskewSrc}
+                download={imageDownloadName(log)}
+                className="mb-3 flex w-full items-center justify-center gap-2 rounded-md border border-indigo-500/50 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-100 transition-colors hover:bg-indigo-500/20 hover:border-indigo-400"
+              >
+                <Download size={14} />
+                원본 이미지 다운로드
+              </a>
+            )}
 
             <dl className="space-y-2.5 text-xs">
               <MetaRow label="검사 ID"     value={`#${log.id}`}              />

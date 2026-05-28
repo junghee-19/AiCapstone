@@ -40,3 +40,5 @@ logging:
 inspection:
   # 검사 캡처 이미지 저장 디렉토리 (도커 볼륨으로 호스트에 매핑)
   image-storage-dir: ${INSPECTION_IMAGE_DIR:/var/inspection-images}
+  # 라벨링/학습용 원본 이미지 저장 디렉토리 (검사 이력 이미지와 분리)
+  dataset-image-storage-dir: ${DATASET_IMAGE_DIR:/var/dataset-images}

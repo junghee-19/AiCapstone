@@ -124,7 +124,7 @@ export default function DashboardPage() {
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-full">
 
-      {/* 페이지 제목 + 엣지 액션 */}
+      {/* 페이지 제목 + 액션 */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-white">실시간 대시보드</h2>

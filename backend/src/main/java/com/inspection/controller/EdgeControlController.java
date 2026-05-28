@@ -71,6 +71,23 @@ public class EdgeControlController {
         return ResponseEntity.accepted().body(command);
     }
 
+    @PostMapping("/{deviceId}/dataset/capture/start")
+    public ResponseEntity<EdgeCommandMessage> startDatasetCapture(
+            @PathVariable String deviceId,
+            @RequestParam(defaultValue = "10") int count,
+            @RequestParam(defaultValue = "3.0") double interval
+    ) {
+        EdgeCommandMessage command = edgeDeviceRegistry.sendCommand(
+                deviceId,
+                "dataset.capture.start",
+                Map.of(
+                        "count", count,
+                        "interval", interval
+                )
+        );
+        return ResponseEntity.accepted().body(command);
+    }
+
     private Map<String, Object> toDeviceResponse(EdgeDeviceSession device) {
         return Map.of(
                 "deviceId", device.getDeviceId(),

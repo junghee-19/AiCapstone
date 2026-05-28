@@ -201,7 +201,9 @@ def align_image_to_reference_by_fiducials(
         (정합 이미지, 정합 후 alignment, 2x3 affine matrix)
     """
     if alignment.fiducial1 is None or alignment.fiducial2 is None:
-        raise ValueError("정합을 위해 fiducial1/2가 필요합니다.")
+        logger.warning("[alignment] fewer than two fiducials; returning original image without alignment")
+        m23 = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float64)
+        return image, alignment, m23
 
     src1 = np.array([alignment.fiducial1.center_x, alignment.fiducial1.center_y], dtype=np.float64)
     src2 = np.array([alignment.fiducial2.center_x, alignment.fiducial2.center_y], dtype=np.float64)
