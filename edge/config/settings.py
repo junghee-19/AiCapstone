@@ -109,6 +109,9 @@ class Settings(BaseSettings):
     # True(기본): YOLO가 1건이라도 잡으면 FAIL (단선/까짐 전용 모델).
     # False: 정렬 성공 시 PASS — 탐지 박스는 그대로 서버·대시보드에 보냄(부품 검출·표시용).
     FAIL_ON_ANY_YOLO_DETECTION: bool = Field(default=True)
+    # 통합 모델에서 FAIL로 처리할 결함 클래스 목록. 정상 구성요소 클래스는 여기에 넣지 않는다.
+    # 예: "trace_open,metal_damage,pinhole,short"
+    DEFECT_CLASS_NAMES: str = Field(default="trace_open,metal_damage,pinhole,short")
 
     # ── 멀티보드 라우팅 설정 ──────────────────────────────────────────────────
     MULTI_BOARD_ENABLED: bool = Field(default=False)
@@ -187,6 +190,13 @@ class Settings(BaseSettings):
         if self.YOLO_DEFECT_CONFIDENCE_THRESHOLD is not None:
             return float(self.YOLO_DEFECT_CONFIDENCE_THRESHOLD)
         return float(self.YOLO_CONFIDENCE_THRESHOLD)
+
+    def defect_class_set(self) -> set[str]:
+        return {
+            name.strip().lower()
+            for name in self.DEFECT_CLASS_NAMES.split(",")
+            if name.strip()
+        }
 
     @field_validator("STAGE2_SOURCE_MODE")
     @classmethod

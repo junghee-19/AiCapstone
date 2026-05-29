@@ -714,8 +714,19 @@ def _run_production_vision_pipeline(
 
         logger.info("[파이프라인] 결함 탐지: %d건", len(defect_items))
 
+        configured_defect_classes = settings.defect_class_set()
+        yolo_defect_items = [
+            d for d in defect_items
+            if d.defect_type.strip().lower() in configured_defect_classes
+        ]
         if settings.FAIL_ON_ANY_YOLO_DETECTION:
             final_result = InspectionResult.FAIL if defect_items else InspectionResult.PASS
+        elif yolo_defect_items:
+            final_result = InspectionResult.FAIL
+            logger.warning(
+                "[파이프라인] 결함 클래스 검출 → FAIL: %s",
+                [d.defect_type for d in yolo_defect_items],
+            )
         else:
             # 부품/영역 다클래스 표시용: 박스는 전부 전송, 판정은 정렬만 만족하면 PASS
             final_result = InspectionResult.PASS
