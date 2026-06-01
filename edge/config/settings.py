@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     AUTO_INSPECTION_IDLE_POLL_SEC: float = Field(default=0.5, ge=0.05, le=10.0)
     # 자동 촬영 진입 조건: 이 개수 이상의 피듀셜이 보이면 PCB가 촬영 영역에 들어온 것으로 본다.
     PCB_CAPTURE_MIN_FIDUCIALS: int = Field(default=2, ge=1, le=4)
+    # Pi 터치스크린 라이브 스트림에 촬영 가이드/피듀셜 트래킹 오버레이 표시
+    TOUCH_GUIDE_OVERLAY_ENABLED: bool = Field(default=True)
+    # 오버레이용 피듀셜 YOLO 실행 주기(초). 매 프레임 추론하지 않도록 제한한다.
+    TOUCH_GUIDE_DETECTION_INTERVAL_SEC: float = Field(default=0.5, ge=0.1, le=5.0)
 
     # ── YOLO 추론 설정 ───────────────────────────────────────────────────────
     # 단일 통합 모델 (best.pt) 사용

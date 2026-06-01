@@ -41,6 +41,13 @@ router = APIRouter(prefix="/edge", tags=["Edge Device"])
 
 _preview_lock = threading.Lock()
 _last_preview_jpeg: Optional[bytes] = None
+_last_guide_detection_at: float = 0.0
+_last_guide_state: dict[str, Any] = {
+    "fiducials": [],
+    "alignment": None,
+    "gate_ok": False,
+    "gate_reason": "waiting",
+}
 
 
 def _normalize_stage2_mode(stage2_source: Optional[str]) -> str:
@@ -51,19 +58,111 @@ def _normalize_stage2_mode(stage2_source: Optional[str]) -> str:
         raise HTTPException(status_code=400, detail="stage2Source must be 'raw' or 'aligned'")
     return mode
 
-def _draw_detection_overlay(frame: np.ndarray, fiducials: list[Any], alignment: Any) -> np.ndarray:
-    """실시간 스트림 프레임에 피듀셜/PCB 인식 가이드를 그린다."""
+def _refresh_capture_guide_state(frame: np.ndarray) -> dict[str, Any]:
+    """오버레이용 피듀셜 상태를 낮은 빈도로 갱신한다."""
+    global _last_guide_detection_at, _last_guide_state
+
+    now = time.perf_counter()
+    if now - _last_guide_detection_at < settings.TOUCH_GUIDE_DETECTION_INTERVAL_SEC:
+        return _last_guide_state
+
+    _last_guide_detection_at = now
+    try:
+        import main as main_mod
+        from inference.alignment import compute_alignment
+
+        stage1 = getattr(main_mod, "_stage1_detector")()
+        if stage1 is None:
+            _last_guide_state = {
+                "fiducials": [],
+                "alignment": None,
+                "gate_ok": False,
+                "gate_reason": "stage1-not-ready",
+            }
+            return _last_guide_state
+
+        fiducials, _ = stage1.detect_fiducials(frame)
+        alignment = compute_alignment(fiducials)
+        gate_ok, gate_reason = getattr(main_mod, "_pcb_capture_gate")(frame, alignment)
+        _last_guide_state = {
+            "fiducials": fiducials,
+            "alignment": alignment,
+            "gate_ok": gate_ok,
+            "gate_reason": gate_reason,
+        }
+    except Exception as e:
+        logger.debug("[프리뷰 가이드] 피듀셜 상태 갱신 실패: %s", e)
+        _last_guide_state = {
+            "fiducials": [],
+            "alignment": None,
+            "gate_ok": False,
+            "gate_reason": "guide-error",
+        }
+    return _last_guide_state
+
+
+def _draw_detection_overlay(frame: np.ndarray, fiducials: list[Any], alignment: Any, gate_ok: bool = False, gate_reason: str = "") -> np.ndarray:
+    """실시간 스트림 프레임에 촬영 영역/피듀셜 인식 가이드를 그린다."""
     annotated = frame.copy()
+    h, w = annotated.shape[:2]
+
+    tol_x = int(w * settings.CAMERA_CENTER_TOLERANCE_RATIO)
+    tol_y = int(h * settings.CAMERA_CENTER_TOLERANCE_RATIO)
+    cx, cy = w // 2, h // 2
+    guide_x1 = max(0, cx - tol_x)
+    guide_y1 = max(0, cy - tol_y)
+    guide_x2 = min(w - 1, cx + tol_x)
+    guide_y2 = min(h - 1, cy + tol_y)
+    guide_color = (70, 210, 110) if gate_ok else (150, 150, 150)
+    guide_fill = annotated.copy()
+    cv2.rectangle(guide_fill, (guide_x1, guide_y1), (guide_x2, guide_y2), guide_color, -1)
+    cv2.addWeighted(guide_fill, 0.12 if gate_ok else 0.08, annotated, 0.88 if gate_ok else 0.92, 0, annotated)
+    cv2.rectangle(annotated, (guide_x1, guide_y1), (guide_x2, guide_y2), guide_color, 4)
+    cv2.line(annotated, (cx - 22, cy), (cx + 22, cy), guide_color, 2)
+    cv2.line(annotated, (cx, cy - 22), (cx, cy + 22), guide_color, 2)
+
+    status_text = "READY TO CAPTURE" if gate_ok else "ALIGN PCB IN BOX"
+    cv2.putText(
+        annotated,
+        status_text,
+        (guide_x1, max(34, guide_y1 - 14)),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.9,
+        guide_color,
+        3,
+        cv2.LINE_AA,
+    )
+    if gate_reason:
+        cv2.putText(
+            annotated,
+            gate_reason,
+            (guide_x1, min(h - 18, guide_y2 + 34)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.62,
+            guide_color,
+            2,
+            cv2.LINE_AA,
+        )
 
     for idx, item in enumerate(fiducials[:2], start=1):
         x = int(item.bbox.x)
         y = int(item.bbox.y)
         w = int(item.bbox.width)
         h = int(item.bbox.height)
-        cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 220, 255), 2)
+        fx = int(item.center_x)
+        fy = int(item.center_y)
+        cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 220, 255), 3)
+        cv2.drawMarker(
+            annotated,
+            (fx, fy),
+            (0, 220, 255),
+            markerType=cv2.MARKER_CROSS,
+            markerSize=30,
+            thickness=2,
+        )
         cv2.putText(
             annotated,
-            f"Fiducial {idx}",
+            f"F{idx} {item.confidence:.2f}",
             (x, max(24, y - 8)),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
@@ -72,30 +171,21 @@ def _draw_detection_overlay(frame: np.ndarray, fiducials: list[Any], alignment: 
             cv2.LINE_AA,
         )
 
-    if alignment.fiducial1 is not None and alignment.fiducial2 is not None:
-        from inference.alignment import crop_inspection_roi_with_offset
-
-        h, w = annotated.shape[:2]
-        _, roi_x, roi_y = crop_inspection_roi_with_offset(annotated, alignment)
-        b1 = alignment.fiducial1.bbox
-        b2 = alignment.fiducial2.bbox
-        roi_w = max(b1.x + b1.width, b2.x + b2.width) - min(b1.x, b2.x)
-        roi_h = max(b1.y + b1.height, b2.y + b2.height) - min(b1.y, b2.y)
-        pad_x = int(roi_w * 0.05)
-        pad_y = int(roi_h * 0.05)
-        x_min = max(0, roi_x)
-        y_min = max(0, roi_y)
-        x_max = min(w, x_min + roi_w + pad_x * 2)
-        y_max = min(h, y_min + roi_h + pad_y * 2)
-
-        cv2.rectangle(annotated, (x_min, y_min), (x_max, y_max), (80, 255, 120), 3)
+    if alignment is not None and alignment.fiducial1 is not None and alignment.fiducial2 is not None:
+        f1 = alignment.fiducial1
+        f2 = alignment.fiducial2
+        p1 = (int(f1.center_x), int(f1.center_y))
+        p2 = (int(f2.center_x), int(f2.center_y))
+        mid = (int((p1[0] + p2[0]) / 2), int((p1[1] + p2[1]) / 2))
+        cv2.line(annotated, p1, p2, guide_color, 2)
+        cv2.circle(annotated, mid, 9, guide_color, -1)
         cv2.putText(
             annotated,
-            "PCB DETECTED",
-            (x_min, max(28, y_min - 10)),
+            f"MID {mid[0]}, {mid[1]}",
+            (mid[0] + 14, max(28, mid[1] - 10)),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.9,
-            (80, 255, 120),
+            0.65,
+            guide_color,
             2,
             cv2.LINE_AA,
         )
@@ -324,6 +414,15 @@ async def stream_camera() -> StreamingResponse:
         while True:
             try:
                 frame = cam.capture(flush=False)
+                if settings.TOUCH_GUIDE_OVERLAY_ENABLED:
+                    guide_state = _refresh_capture_guide_state(frame)
+                    frame = _draw_detection_overlay(
+                        frame,
+                        guide_state.get("fiducials") or [],
+                        guide_state.get("alignment"),
+                        bool(guide_state.get("gate_ok")),
+                        str(guide_state.get("gate_reason") or ""),
+                    )
 
                 ok, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
                 if not ok:
