@@ -6,13 +6,49 @@
   <title>PCB 검사 — 라즈베리파이 터치스크린</title>
   <link rel="stylesheet" href="/touch/static/style.css" />
 </head>
-<body data-status="IDLE">
+<body data-status="IDLE" data-auto="stopped" data-edge="checking">
+
+  <!-- 화면 0: 로컬 제어 홈 -->
+  <section class="screen screen-home">
+    <div class="home-shell">
+      <div class="brand-block">
+        <p class="kicker">PCB Vision Station</p>
+        <h1>자동 검사 대기</h1>
+      </div>
+
+      <div class="status-panel">
+        <div class="status-row">
+          <span class="status-label">로컬 서버</span>
+          <span class="connection-pill" id="edge-status">
+            <span class="dot"></span>
+            <span id="edge-status-text">확인 중</span>
+          </span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">중앙 서버</span>
+          <span class="server-url" id="server-url">-</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">자동 검사</span>
+          <span class="auto-state" id="auto-state">중지됨</span>
+        </div>
+      </div>
+
+      <button id="start-auto" class="primary-action" type="button">
+        자동 검사 시작
+      </button>
+    </div>
+  </section>
 
   <!-- 화면 1: 라이브 카메라 -->
   <section class="screen screen-live">
-    <img id="live-stream" src="/edge/camera/stream" alt="라이브 카메라" />
+    <img id="live-stream" data-src="/edge/camera/stream" alt="라이브 카메라" />
     <div class="status-badge live">
       <span class="dot"></span>LIVE
+    </div>
+    <div class="auto-banner">
+      <span>자동 검사 실행 중</span>
+      <button id="stop-auto-live" class="stop-action" type="button">검사 중지</button>
     </div>
   </section>
 
@@ -33,6 +69,8 @@
       <canvas id="result-canvas"></canvas>
     </div>
   </section>
+
+  <button id="stop-auto-floating" class="floating-stop" type="button">검사 중지</button>
 
   <script src="/touch/static/app.js"></script>
 </body>

@@ -230,13 +230,23 @@ async def _auto_inspect_loop() -> None:
                 logger.info("[자동검사] PCB 배출 확인 — 다음 PCB 감시 재개")
 
             logger.info("[자동검사] PCB 감시 중...")
+            present, reason = await asyncio.to_thread(is_pcb_in_capture_area)
+            if not present:
+                logger.debug("[자동검사] PCB 촬영 대기 — %s", reason)
+                await asyncio.sleep(idle_poll_seconds)
+                continue
+
+            state = get_touchscreen_state()
+            await state.set_busy("PCB 감지됨 — 자동 검사 중...")
             async with _trigger_lock:
-                performed = await asyncio.to_thread(run_inspection_pipeline_when_pcb_present)
-            if performed:
+                packet = await asyncio.to_thread(run_inspection_pipeline_when_pcb_present)
+            if packet is not None:
+                await _notify_result(packet)
                 _auto_waiting_for_exit = True
                 logger.info("[자동검사] 검사 완료 — 다음 감시까지 %.1f초 대기", _auto_interval)
                 await asyncio.sleep(_auto_interval)
                 continue
+            await state.set_idle()
         except asyncio.CancelledError:
             raise
         except Exception as e:

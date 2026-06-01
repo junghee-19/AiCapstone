@@ -1071,17 +1071,17 @@ def _build_packet(
     )
 
 
-def run_inspection_pipeline_when_pcb_present() -> bool:
+def run_inspection_pipeline_when_pcb_present() -> Optional[InspectionPacket]:
     """
     자동 검사 전용:
     라이브 프레임에서 PCB(피듀셜 2개)가 보일 때만 이미지를 저장하고 본검사를 실행한다.
 
     Returns:
-        실제 검사까지 수행했으면 True, PCB 미검출로 건너뛰었으면 False.
+        실제 검사까지 수행했으면 InspectionPacket, PCB 미검출로 건너뛰었으면 None.
     """
     if camera is None:
         logger.debug("[자동검사] 카메라가 없어 PCB 감지를 건너뜁니다.")
-        return False
+        return None
 
     has_models = (
         (fiducial_detector is not None and defect_detector is not None)
@@ -1090,26 +1090,26 @@ def run_inspection_pipeline_when_pcb_present() -> bool:
     )
     if not has_models:
         logger.warning("[자동검사] YOLO 모델이 로드되지 않아 PCB 감지를 건너뜁니다.")
-        return False
+        return None
 
     pipeline_start = time.perf_counter()
     frame = camera.capture()
     stage1 = _stage1_detector()
     if stage1 is None:
         logger.warning("[자동검사] Stage 1 YOLO 모델이 로드되지 않아 PCB 감지를 건너뜁니다.")
-        return False
+        return None
     fiducials, fiducial_ms = stage1.detect_fiducials(frame)
     alignment = compute_alignment(fiducials)
 
     gate_ok, gate_reason = _pcb_capture_gate(frame, alignment)
     if not gate_ok:
         logger.debug("[자동검사] PCB 촬영 대기 — %s", gate_reason)
-        return False
+        return None
 
     image_path = _save_frame(frame)
 
     logger.info("[자동검사] PCB 촬영 영역 진입 감지 (%s) — 본검사 시작", gate_reason)
-    _run_production_vision_pipeline(
+    return _run_production_vision_pipeline(
         frame,
         image_path,
         pipeline_start,
@@ -1118,7 +1118,6 @@ def run_inspection_pipeline_when_pcb_present() -> bool:
         fiducial_ms_precomputed=fiducial_ms,
         alignment_precomputed=alignment,
     )
-    return True
 
 
 def _finalize(packet: InspectionPacket) -> None:

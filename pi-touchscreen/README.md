@@ -6,7 +6,7 @@
 
 ```
 pi-touchscreen/
-├── index.html    # 3-화면 컨테이너 (LIVE / BUSY / RESULT)
+├── index.html    # 4-화면 컨테이너 (HOME / LIVE / BUSY / RESULT)
 ├── style.css     # 터치 친화 큼지막 스타일 (작은 디스플레이 가정)
 └── app.js        # SSE 수신 + 화면 전환 + 결함 박스 캔버스 그리기
 ```
@@ -16,7 +16,11 @@ pi-touchscreen/
 1. Pi 에서 `edge` FastAPI 서버가 기동되면
 2. 브라우저(키오스크 모드)가 `http://localhost:8000/touch` 를 연다
 3. `app.js` 가 `EventSource('/touch/events')` 로 상태(SSE) 구독
-4. 검사 시작 → BUSY 화면, 검사 완료 → RESULT 화면, 6초 후 LIVE 복귀
+4. HOME 화면에서 로컬 서버 상태와 중앙 서버 URL 확인
+5. `자동 검사 시작` 터치 → `/edge/inspect/auto/start` 호출
+6. 자동 검사 실행 중에는 LIVE 화면과 `검사 중지` 버튼 표시
+7. PCB가 촬영 영역에 들어오면 BUSY 화면, 검사 완료 → RESULT 화면
+8. `검사 중지` 터치 → `/edge/inspect/auto/stop` 호출 후 HOME 복귀
 
 ## edge 와의 관계
 

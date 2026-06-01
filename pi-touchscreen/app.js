@@ -6,6 +6,16 @@
   const resultText = document.getElementById('result-text')
   const canvas = document.getElementById('result-canvas')
   const ctx = canvas.getContext('2d')
+  const edgeStatusText = document.getElementById('edge-status-text')
+  const serverUrl = document.getElementById('server-url')
+  const autoState = document.getElementById('auto-state')
+  const startAutoButton = document.getElementById('start-auto')
+  const stopAutoLiveButton = document.getElementById('stop-auto-live')
+  const stopAutoFloatingButton = document.getElementById('stop-auto-floating')
+
+  let autoRunning = false
+  let edgeOnline = false
+  let actionInFlight = false
 
   // ── 결함 종류별 색상·라벨 (대시보드와 동일 매핑) ─────────────────────────
   const DEFECT_COLOR = {
@@ -77,6 +87,102 @@
     console.warn('[touch] SSE 연결 끊김 (자동 재시도):', err)
   }
 
+  // ── 로컬 제어 버튼 ─────────────────────────────────────────────────────
+  startAutoButton?.addEventListener('click', () => startAutoInspection())
+  stopAutoLiveButton?.addEventListener('click', () => stopAutoInspection())
+  stopAutoFloatingButton?.addEventListener('click', () => stopAutoInspection())
+
+  async function startAutoInspection() {
+    if (actionInFlight) return
+    actionInFlight = true
+    setButtonBusy(startAutoButton, true, '시작 중...')
+    try {
+      const res = await fetch('/edge/inspect/auto/start?interval=5', { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      await refreshControlStatus()
+      setLiveStreamEnabled(true)
+    } catch (err) {
+      console.warn('[touch] 자동 검사 시작 실패:', err)
+      edgeStatusText.textContent = '시작 실패'
+      body.dataset.edge = edgeOnline ? 'online' : 'offline'
+    } finally {
+      setButtonBusy(startAutoButton, false, '자동 검사 시작')
+      actionInFlight = false
+    }
+  }
+
+  async function stopAutoInspection() {
+    if (actionInFlight) return
+    actionInFlight = true
+    setButtonBusy(stopAutoLiveButton, true, '중지 중...')
+    setButtonBusy(stopAutoFloatingButton, true, '중지 중...')
+    try {
+      const res = await fetch('/edge/inspect/auto/stop', { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      await refreshControlStatus()
+      await fetch('/touch/dismiss', { method: 'POST' }).catch(() => {})
+      setLiveStreamEnabled(false)
+    } catch (err) {
+      console.warn('[touch] 자동 검사 중지 실패:', err)
+    } finally {
+      setButtonBusy(stopAutoLiveButton, false, '검사 중지')
+      setButtonBusy(stopAutoFloatingButton, false, '검사 중지')
+      actionInFlight = false
+    }
+  }
+
+  function setButtonBusy(button, busy, text) {
+    if (!button) return
+    button.disabled = busy
+    button.textContent = text
+  }
+
+  function setLiveStreamEnabled(enabled) {
+    if (!liveStream) return
+    if (enabled) {
+      const base = liveStream.dataset.src || '/edge/camera/stream'
+      if (!liveStream.src) liveStream.src = `${base}?t=${Date.now()}`
+      return
+    }
+    liveStream.removeAttribute('src')
+  }
+
+  async function refreshControlStatus() {
+    const [edgeResult, autoResult] = await Promise.allSettled([
+      fetch('/edge/status', { cache: 'no-store' }).then((r) => {
+        if (!r.ok) throw new Error(`edge status ${r.status}`)
+        return r.json()
+      }),
+      fetch('/edge/inspect/auto/status', { cache: 'no-store' }).then((r) => {
+        if (!r.ok) throw new Error(`auto status ${r.status}`)
+        return r.json()
+      }),
+    ])
+
+    edgeOnline = edgeResult.status === 'fulfilled'
+    body.dataset.edge = edgeOnline ? 'online' : 'offline'
+    edgeStatusText.textContent = edgeOnline ? '연결됨' : '연결 끊김'
+
+    if (edgeOnline) {
+      const data = edgeResult.value
+      serverUrl.textContent = data.server?.base_url || '-'
+    }
+
+    if (autoResult.status === 'fulfilled') {
+      autoRunning = Boolean(autoResult.value.running)
+      body.dataset.auto = autoRunning ? 'running' : 'stopped'
+      autoState.textContent = autoRunning
+        ? (autoResult.value.waiting_for_pcb_exit ? 'PCB 배출 대기' : '실행 중')
+        : '중지됨'
+      setLiveStreamEnabled(autoRunning)
+    } else {
+      autoRunning = false
+      body.dataset.auto = 'stopped'
+      autoState.textContent = '상태 확인 실패'
+      setLiveStreamEnabled(false)
+    }
+  }
+
   function handleStateUpdate(state) {
     const status = state.status || 'IDLE'
     body.dataset.status = status
@@ -88,8 +194,10 @@
       renderResult(state)
     }
     if (status === 'IDLE') {
-      // 라이브 스트림이 끊겼을 수 있으니 강제 새로고침
-      liveStream.src = `/edge/camera/stream?t=${Date.now()}`
+      if (autoRunning) {
+        // 라이브 스트림이 끊겼을 수 있으니 강제 새로고침
+        liveStream.src = `/edge/camera/stream?t=${Date.now()}`
+      }
     }
   }
 
@@ -261,10 +369,8 @@
     })
   }
 
-  // 페이지 로드 시 라이브 스트림 강제 시작
-  if (liveStream && !liveStream.src) {
-    liveStream.src = '/edge/camera/stream'
-  }
+  refreshControlStatus()
+  setInterval(refreshControlStatus, 2000)
 
   // ── RESULT 화면 탭 시 LIVE 로 복귀 ─────────────────────────────────────
   const resultScreen = document.querySelector('.screen-result')
