@@ -84,6 +84,9 @@ class Settings(BaseSettings):
     PCB_CAPTURE_SPAN_TOLERANCE_RATIO: float = Field(default=0.06, gt=0.0, le=1.0)
     PCB_CAPTURE_EXPECTED_ANGLE_DEG: float = Field(default=46.0)
     PCB_CAPTURE_ANGLE_TOLERANCE_DEG: float = Field(default=5.0, gt=0.0, le=45.0)
+    # 화면에 보이는 작업자용 가이드 박스. 실제 판정 허용 박스보다 크게 그린다.
+    PCB_GUIDE_BOX_WIDTH_RATIO: float = Field(default=0.46, gt=0.01, le=1.0)
+    PCB_GUIDE_BOX_HEIGHT_RATIO: float = Field(default=0.60, gt=0.01, le=1.0)
     # Pi 터치스크린 라이브 스트림에 촬영 가이드/피듀셜 트래킹 오버레이 표시
     TOUCH_GUIDE_OVERLAY_ENABLED: bool = Field(default=True)
     # 오버레이용 피듀셜 YOLO 실행 주기(초). 매 프레임 추론하지 않도록 제한한다.

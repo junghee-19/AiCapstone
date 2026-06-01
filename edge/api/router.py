@@ -106,19 +106,24 @@ def _draw_detection_overlay(frame: np.ndarray, fiducials: list[Any], alignment: 
     annotated = frame.copy()
     h, w = annotated.shape[:2]
 
-    tol_x = int(w * settings.PCB_CAPTURE_TOLERANCE_X_RATIO)
-    tol_y = int(h * settings.PCB_CAPTURE_TOLERANCE_Y_RATIO)
     cx = int(w * settings.PCB_CAPTURE_CENTER_X_RATIO)
     cy = int(h * settings.PCB_CAPTURE_CENTER_Y_RATIO)
-    guide_x1 = max(0, cx - tol_x)
-    guide_y1 = max(0, cy - tol_y)
-    guide_x2 = min(w - 1, cx + tol_x)
-    guide_y2 = min(h - 1, cy + tol_y)
+    guide_half_w = int(w * settings.PCB_GUIDE_BOX_WIDTH_RATIO / 2.0)
+    guide_half_h = int(h * settings.PCB_GUIDE_BOX_HEIGHT_RATIO / 2.0)
+    guide_x1 = max(0, cx - guide_half_w)
+    guide_y1 = max(0, cy - guide_half_h)
+    guide_x2 = min(w - 1, cx + guide_half_w)
+    guide_y2 = min(h - 1, cy + guide_half_h)
+    pass_x1 = max(0, int(cx - (w * settings.PCB_CAPTURE_TOLERANCE_X_RATIO)))
+    pass_y1 = max(0, int(cy - (h * settings.PCB_CAPTURE_TOLERANCE_Y_RATIO)))
+    pass_x2 = min(w - 1, int(cx + (w * settings.PCB_CAPTURE_TOLERANCE_X_RATIO)))
+    pass_y2 = min(h - 1, int(cy + (h * settings.PCB_CAPTURE_TOLERANCE_Y_RATIO)))
     guide_color = (70, 210, 110) if gate_ok else (150, 150, 150)
     guide_fill = annotated.copy()
     cv2.rectangle(guide_fill, (guide_x1, guide_y1), (guide_x2, guide_y2), guide_color, -1)
     cv2.addWeighted(guide_fill, 0.12 if gate_ok else 0.08, annotated, 0.88 if gate_ok else 0.92, 0, annotated)
     cv2.rectangle(annotated, (guide_x1, guide_y1), (guide_x2, guide_y2), guide_color, 4)
+    cv2.rectangle(annotated, (pass_x1, pass_y1), (pass_x2, pass_y2), guide_color, 1)
     cv2.line(annotated, (cx - 22, cy), (cx + 22, cy), guide_color, 2)
     cv2.line(annotated, (cx, cy - 22), (cx, cy + 22), guide_color, 2)
 
@@ -278,6 +283,10 @@ async def get_status() -> dict[str, Any]:
             },
             "pcb_capture_expected_span_ratio": settings.PCB_CAPTURE_EXPECTED_SPAN_RATIO,
             "pcb_capture_expected_angle_deg": settings.PCB_CAPTURE_EXPECTED_ANGLE_DEG,
+            "pcb_guide_box": {
+                "width_ratio": settings.PCB_GUIDE_BOX_WIDTH_RATIO,
+                "height_ratio": settings.PCB_GUIDE_BOX_HEIGHT_RATIO,
+            },
         },
     }
 
