@@ -77,13 +77,13 @@ class Settings(BaseSettings):
     # 2026-06-01 현재 샘플 4장 평균: mid=(0.481055, 0.501794), 1920x1080 기준 약 (924, 542).
     PCB_CAPTURE_CENTER_X_RATIO: float = Field(default=0.481055, ge=0.0, le=1.0)
     PCB_CAPTURE_CENTER_Y_RATIO: float = Field(default=0.501794, ge=0.0, le=1.0)
-    PCB_CAPTURE_TOLERANCE_X_RATIO: float = Field(default=0.05, gt=0.0, le=0.5)
-    PCB_CAPTURE_TOLERANCE_Y_RATIO: float = Field(default=0.05, gt=0.0, le=0.5)
+    PCB_CAPTURE_TOLERANCE_X_RATIO: float = Field(default=0.18, gt=0.0, le=0.5)
+    PCB_CAPTURE_TOLERANCE_Y_RATIO: float = Field(default=0.22, gt=0.0, le=0.5)
     # 피듀셜 간 거리/각도도 크게 벗어나면 다른 위치/스케일/회전으로 보고 자동 촬영을 보류한다.
     PCB_CAPTURE_EXPECTED_SPAN_RATIO: float = Field(default=0.474459, gt=0.0, le=2.0)
-    PCB_CAPTURE_SPAN_TOLERANCE_RATIO: float = Field(default=0.06, gt=0.0, le=1.0)
+    PCB_CAPTURE_SPAN_TOLERANCE_RATIO: float = Field(default=0.15, gt=0.0, le=1.0)
     PCB_CAPTURE_EXPECTED_ANGLE_DEG: float = Field(default=46.0)
-    PCB_CAPTURE_ANGLE_TOLERANCE_DEG: float = Field(default=5.0, gt=0.0, le=45.0)
+    PCB_CAPTURE_ANGLE_TOLERANCE_DEG: float = Field(default=20.0, gt=0.0, le=45.0)
     # 화면에 보이는 작업자용 가이드 박스. 실제 판정 허용 박스보다 크게 그린다.
     PCB_GUIDE_BOX_WIDTH_RATIO: float = Field(default=0.46, gt=0.01, le=1.0)
     PCB_GUIDE_BOX_HEIGHT_RATIO: float = Field(default=0.60, gt=0.01, le=1.0)
@@ -188,7 +188,7 @@ class Settings(BaseSettings):
 
     # ── 정렬 / 각도 보정 ───────────────────────────────────────────────────────
     # 피듀셜 2개로 측정한 기울기가 이 각도(°)를 넘으면 FAIL (오탐·이상 배치로 간주, 보정 안 함)
-    MAX_DESKEW_ANGLE_DEG: float = Field(default=45.0)
+    MAX_DESKEW_ANGLE_DEG: float = Field(default=70.0)
     # 이보다 작으면 회전 보정 생략 (미세 보간 노이즈 감소)
     MIN_DESKEW_ANGLE_DEG: float = Field(default=0.05)
     # 하위 호환·문서용: 과거 "허용 오차 초과 시 FAIL" 모드에서 사용. 파이프라인은 MAX_DESKEW_* 기준.
