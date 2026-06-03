@@ -277,6 +277,7 @@
 
   function renderResult(state) {
     const result = state.result || 'SKIPPED'
+    body.dataset.result = result
     resultHeader.dataset.result = result
     resultText.textContent = result
     startResultCountdown()
