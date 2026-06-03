@@ -2,6 +2,10 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-04 | Detailed statistics remove skipped | [2026-06-04_detailed-statistics-remove-skipped.md](2026-06-04_detailed-statistics-remove-skipped.md) |
+| 2026-06-04 | Detailed statistics filters | [2026-06-04_detailed-statistics-filters.md](2026-06-04_detailed-statistics-filters.md) |
+| 2026-06-04 | Detailed statistics defect filter | [2026-06-04_detailed-statistics-defect-filter.md](2026-06-04_detailed-statistics-defect-filter.md) |
+| 2026-06-04 | Detailed statistics menu | [2026-06-04_detailed-statistics-menu.md](2026-06-04_detailed-statistics-menu.md) |
 | 2026-06-04 | Board reference image update | [2026-06-04_board-reference-image-update.md](2026-06-04_board-reference-image-update.md) |
 | 2026-06-04 | Board reference count correction | [2026-06-04_board-reference-count-correction.md](2026-06-04_board-reference-count-correction.md) |
 | 2026-06-04 | Board reference detected label counts | [2026-06-04_board-reference-detected-label-counts.md](2026-06-04_board-reference-detected-label-counts.md) |

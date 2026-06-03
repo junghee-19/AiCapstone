@@ -13,6 +13,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Header from '@/components/common/Header'
 import Sidebar from '@/components/common/Sidebar'
 import DashboardPage from '@/pages/DashboardPage'
+import DetailedStatsPage from '@/pages/DetailedStatsPage'
 import HistoryPage from '@/pages/HistoryPage'
 import BoardReferencePage from '@/pages/BoardReferencePage'
 import DatasetImagesPage from '@/pages/DatasetImagesPage'
@@ -33,6 +34,7 @@ export default function App() {
         <main className="flex-1 overflow-y-auto bg-[#F4F6F8]">
           <Routes>
             <Route path="/"                element={<DashboardPage />} />
+            <Route path="/stats"           element={<DetailedStatsPage />} />
             <Route path="/history"         element={<HistoryPage />} />
             <Route path="/board-reference" element={<BoardReferencePage />} />
 
