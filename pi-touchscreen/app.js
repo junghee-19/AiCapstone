@@ -73,6 +73,8 @@
     if (t.startsWith('MISSING:')) {
       const cls = t.split(':')[1]
       const ko = DEFECT_LABEL[cls] || DEFECT_LABEL[(cls || '').toUpperCase()] || cls
+      const count = t.match(/^MISSING:[^:]+:expected=(\d+),detected=(\d+),missing=(\d+)$/)
+      if (count) return `${ko} ${count[3]}개 누락`
       return `${ko} 누락`
     }
     // ANOMALY:score=3.98,threshold=3.95
@@ -82,6 +84,18 @@
     }
     return DEFECT_LABEL[t] || t
   }
+  const missingPositionOf = (t) => {
+    if (!t || !t.startsWith('MISSING:')) return null
+    const m = t.match(/^MISSING:[^:]+:expected_at=\(([\d.-]+),([\d.-]+)\),nearest=([\d.]+|inf)px$/)
+    if (!m) return null
+    return {
+      x: Number(m[1]),
+      y: Number(m[2]),
+      nearest: m[3] === 'inf' ? '없음' : `${m[3]}px`,
+    }
+  }
+  const isCountOnlyMissing = (d) =>
+    d?.defectType?.startsWith('MISSING:') && !missingPositionOf(d.defectType)
 
   // ── SSE ────────────────────────────────────────────────────────────────
   const events = new EventSource('/touch/events')
@@ -326,9 +340,6 @@
       if (result === 'FAIL' && defects.length) {
         drawDefectBoxes(defects, ratio)
       }
-      if (fiducials.length) {
-        drawFiducialMarkers(fiducials, ratio)
-      }
     }
     img.onerror = () => {
       console.warn('[touch] 결과 이미지 로드 실패:', url)
@@ -338,46 +349,96 @@
 
   // ── 결함 박스 + 라벨 그리기 (대시보드 DefectBox 와 동일 스타일) ────────────
   function drawDefectBoxes(defects, ratio) {
-    const stroke = Math.max(2, canvas.width / 320)
-    const fontSize = Math.max(11, Math.round(canvas.width / 70))
+    const drawableDefects = defects.filter((d) => !isCountOnlyMissing(d))
+    const summaryDefects = defects.filter((d) => isCountOnlyMissing(d))
+    const stroke = Math.max(2, canvas.width / 360)
+    const fontSize = Math.max(10, Math.round(canvas.width / 86))
     ctx.lineWidth = stroke
     ctx.font = `700 ${fontSize}px ui-monospace, monospace`
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
 
-    defects.forEach((d) => {
+    drawableDefects.forEach((d) => {
       const x = d.bboxX * ratio
       const y = d.bboxY * ratio
       const w = d.bboxWidth * ratio
       const h = d.bboxHeight * ratio
       const color = colorOf(d.defectType)
       const label = labelOf(d.defectType)
+      const missingPosition = missingPositionOf(d.defectType)
 
       // 박스 (테두리만, 채우지 않음)
       ctx.strokeStyle = color
+      ctx.setLineDash(missingPosition ? [8, 5] : [])
       ctx.strokeRect(x, y, w, h)
+      ctx.setLineDash([])
+
+      if (missingPosition) {
+        const cx = missingPosition.x * ratio
+        const cy = missingPosition.y * ratio
+        const cross = Math.max(8, canvas.width / 80)
+        ctx.lineWidth = Math.max(1.5, stroke * 0.8)
+        ctx.beginPath()
+        ctx.moveTo(cx - cross, cy)
+        ctx.lineTo(cx + cross, cy)
+        ctx.moveTo(cx, cy - cross)
+        ctx.lineTo(cx, cy + cross)
+        ctx.stroke()
+      }
 
       // 라벨 배경 + 텍스트
+      const detail = missingPosition
+        ? `예상 (${Math.round(missingPosition.x)}, ${Math.round(missingPosition.y)})`
+        : d.confidence != null && !Number.isNaN(d.confidence)
+          ? `${Math.round(d.confidence * 100)}%`
+          : ''
+      const labelText = detail ? `${label} · ${detail}` : label
       const padX = 6
       const padY = 3
-      const textWidth = ctx.measureText(label).width
-      const labelW = textWidth + padX * 2
+      const availableW = Math.max(64, canvas.width - x - 4)
+      const labelW = Math.min(availableW, ctx.measureText(labelText).width + padX * 2)
       const labelH = fontSize + padY * 2
       const labelX = x
       const labelY = y > labelH ? y - labelH : y + h
-      // 어두운 배경
+
       ctx.fillStyle = 'rgba(15, 23, 42, 0.86)'
       ctx.fillRect(labelX, labelY, labelW, labelH)
-      // 색상 테두리
       ctx.strokeStyle = color
       ctx.lineWidth = 1
       ctx.strokeRect(labelX, labelY, labelW, labelH)
-      // 텍스트 (결함 색상)
       ctx.fillStyle = color
-      ctx.fillText(label, labelX + padX, labelY + padY)
+      ctx.fillText(labelText, labelX + padX, labelY + padY, labelW - padX * 2)
 
       // 다음 박스를 위해 stroke 굵기 복구
       ctx.lineWidth = stroke
+    })
+
+    drawResultNotices(summaryDefects)
+  }
+
+  function drawResultNotices(defects) {
+    if (!defects.length) return
+    const fontSize = Math.max(11, Math.round(canvas.width / 78))
+    const padX = 8
+    const padY = 5
+    let y = 10
+    ctx.font = `700 ${fontSize}px ui-sans-serif, system-ui, sans-serif`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+
+    defects.slice(0, 4).forEach((d) => {
+      const color = colorOf(d.defectType)
+      const text = labelOf(d.defectType)
+      const w = Math.min(canvas.width - 20, ctx.measureText(text).width + padX * 2)
+      const h = fontSize + padY * 2
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)'
+      ctx.fillRect(10, y, w, h)
+      ctx.strokeStyle = color
+      ctx.lineWidth = 1.25
+      ctx.strokeRect(10, y, w, h)
+      ctx.fillStyle = color
+      ctx.fillText(text, 10 + padX, y + padY, w - padX * 2)
+      y += h + 6
     })
   }
 

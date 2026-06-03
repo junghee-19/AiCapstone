@@ -346,12 +346,13 @@ body[data-auto="running"][data-status="RESULT"] .floating-stop {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 14px 32px;
+  min-height: 72px;
+  padding: 8px 24px;
   background: var(--panel);
   border: 1px solid var(--ink-10);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(28, 28, 28, 0.06);
-  font-size: clamp(60px, 13vw, 118px);
+  font-size: clamp(42px, 8vw, 68px);
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
@@ -380,7 +381,7 @@ body[data-auto="running"][data-status="RESULT"] .floating-stop {
 }
 
 .result-canvas-wrap {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   width: 100%;
   min-height: 0;
   display: flex;

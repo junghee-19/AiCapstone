@@ -2,6 +2,7 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-03 | Pi touchscreen result focus | [2026-06-03_pi-touchscreen-result-focus.md](2026-06-03_pi-touchscreen-result-focus.md) |
 | 2026-06-03 | Pi touchscreen home spacing | [2026-06-03_pi-touchscreen-home-spacing.md](2026-06-03_pi-touchscreen-home-spacing.md) |
 | 2026-06-03 | Pi touchscreen home copy layout | [2026-06-03_pi-touchscreen-home-copy-layout.md](2026-06-03_pi-touchscreen-home-copy-layout.md) |
 | 2026-06-03 | Pi touchscreen theme refresh | [2026-06-03_pi-touchscreen-theme-refresh.md](2026-06-03_pi-touchscreen-theme-refresh.md) |
