@@ -2,6 +2,8 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-04 | Detection time detail layout | [2026-06-04_detection-time-detail-layout.md](2026-06-04_detection-time-detail-layout.md) |
+| 2026-06-04 | Remove detailed stat pie charts | [2026-06-04_remove-detailed-stat-pie-charts.md](2026-06-04_remove-detailed-stat-pie-charts.md) |
 | 2026-06-04 | Dashboard statistics separation | [2026-06-04_dashboard-statistics-separation.md](2026-06-04_dashboard-statistics-separation.md) |
 | 2026-06-04 | Detailed statistics remove skipped | [2026-06-04_detailed-statistics-remove-skipped.md](2026-06-04_detailed-statistics-remove-skipped.md) |
 | 2026-06-04 | Detailed statistics filters | [2026-06-04_detailed-statistics-filters.md](2026-06-04_detailed-statistics-filters.md) |

@@ -1,18 +1,16 @@
 import { useMemo, useState } from 'react'
 import {
-  Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
+  Bar, BarChart, CartesianGrid, Cell,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import {
-  Activity, AlertTriangle, CalendarDays, CheckCircle2, Clock3, Filter, Gauge, Percent,
+  Activity, AlertTriangle, CalendarDays, CheckCircle2, Clock3, Filter, Gauge,
 } from 'lucide-react'
 import { useAllInspections } from '@/hooks/useInspectionData'
 import FailRateTrendChart from '@/components/dashboard/FailRateTrendChart'
 import { defectColor, defectDisplayName } from '@/types/inspection'
 import type { DefectDetail, InspectionLog, InspectionResultType } from '@/types/inspection'
 
-const PASS_COLOR = '#86EFAC'
-const FAIL_COLOR = '#FCA5A5'
 const NORMAL_LABEL_CLASSES = new Set([
   'mount_hole',
   'fiducial',
@@ -126,10 +124,6 @@ function buildDetailedStats(logs: InspectionLog[]) {
     maxTime,
     totalDefects,
     defectStats,
-    resultData: [
-      { name: '정상', value: passCount, fill: PASS_COLOR },
-      { name: '오류', value: failCount, fill: FAIL_COLOR },
-    ].filter((item) => item.value > 0),
   }
 }
 
@@ -327,98 +321,27 @@ export default function DetailedStatsPage() {
         />
       </div>
 
-      <section className="rounded-xl border border-Black-10% bg-white p-4 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-Black-100%">검출 시간</h3>
-            <p className="mt-1 text-xs text-Black-40%">inference time 기준 최대, 평균, 최소</p>
-          </div>
-          <Clock3 size={16} className="text-Black-40%" />
-        </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <StatCard icon={Clock3} label="최대 검출 시간" value={formatMs(stats.maxTime)} hint="가장 오래 걸린 검사" />
-          <StatCard icon={Clock3} label="평균 검출 시간" value={formatMs(stats.avgTime)} hint="기록된 검출 시간 평균" />
-          <StatCard icon={Clock3} label="최소 검출 시간" value={formatMs(stats.minTime)} hint="가장 빠른 검사" />
-        </div>
-      </section>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <section className="rounded-xl border border-Black-10% bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-Black-100%">정상, 오류율</h3>
-              <p className="mt-1 text-xs text-Black-40%">PASS / FAIL 비중</p>
-            </div>
-            <Percent size={16} className="text-Black-40%" />
-          </div>
-          {stats.resultData.length ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={stats.resultData} dataKey="value" nameKey="name" innerRadius={68} outerRadius={92}>
-                  {stats.resultData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.fill} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`${value}건`, '건수']} />
-                <Legend verticalAlign="bottom" />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyPanel label="검사 데이터가 없습니다." />
-          )}
-        </section>
-
-        <section className="rounded-xl border border-Black-10% bg-white p-4 shadow-sm">
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-Black-100%">오류 종류</h3>
-            <p className="mt-1 text-xs text-Black-40%">오류 라벨별 누적 건수</p>
-          </div>
-          {stats.defectStats.length ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={stats.defectStats.slice(0, 8)} margin={{ top: 8, right: 12, left: -20, bottom: 18 }}>
-                <CartesianGrid stroke="rgba(28, 28, 28, 0.1)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} dy={8} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(value) => [`${value}개`, '오류 라벨']} />
-                <Bar dataKey="count" radius={[8, 8, 0, 0]}>
-                  {stats.defectStats.slice(0, 8).map((entry) => (
-                    <Cell key={entry.key} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyPanel label="오류 데이터가 없습니다." />
-          )}
-        </section>
-      </div>
-
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-5">
         <section className="rounded-xl border border-Black-10% bg-white p-4 shadow-sm xl:col-span-2">
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-Black-100%">오류 종류에 따른 비율</h3>
-            <p className="mt-1 text-xs text-Black-40%">전체 오류 라벨 중 유형별 비중</p>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-Black-100%">검출 시간</h3>
+              <p className="mt-1 text-xs text-Black-40%">inference time 기준 요약</p>
+            </div>
+            <Clock3 size={16} className="text-Black-40%" />
           </div>
-          {stats.defectStats.length ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie data={stats.defectStats} dataKey="count" nameKey="label" outerRadius={96}>
-                  {stats.defectStats.map((entry) => (
-                    <Cell key={entry.key} fill={entry.color} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value, name) => [`${value}개`, name]} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyPanel label="오류 비율 데이터가 없습니다." />
-          )}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <StatCard icon={Clock3} label="최대 검출 시간" value={formatMs(stats.maxTime)} hint="가장 오래 걸린 검사" />
+            <StatCard icon={Clock3} label="평균 검출 시간" value={formatMs(stats.avgTime)} hint="기록된 검출 시간 평균" />
+            <StatCard icon={Clock3} label="최소 검출 시간" value={formatMs(stats.minTime)} hint="가장 빠른 검사" />
+            <StatCard icon={Activity} label="검출 시간 표본" value={`${stats.inspectedCount.toLocaleString()}건`} hint="PASS/FAIL 검사 기준" />
+          </div>
         </section>
 
         <section className="rounded-xl border border-Black-10% bg-white p-4 shadow-sm xl:col-span-3">
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-Black-100%">오류 유형 상세</h3>
-            <p className="mt-1 text-xs text-Black-40%">많이 쓰는 Pareto 형태로 건수와 비율을 함께 표시</p>
+            <p className="mt-1 text-xs text-Black-40%">건수와 비율을 함께 표시</p>
           </div>
           <div className="overflow-hidden rounded-lg border border-Black-10%">
             <table className="w-full text-left text-sm">
@@ -453,6 +376,32 @@ export default function DetailedStatsPage() {
               </tbody>
             </table>
           </div>
+        </section>
+      </div>
+
+      <div>
+        <section className="rounded-xl border border-Black-10% bg-white p-4 shadow-sm">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-Black-100%">오류 종류</h3>
+            <p className="mt-1 text-xs text-Black-40%">오류 라벨별 누적 건수</p>
+          </div>
+          {stats.defectStats.length ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={stats.defectStats.slice(0, 8)} margin={{ top: 8, right: 12, left: -20, bottom: 18 }}>
+                <CartesianGrid stroke="rgba(28, 28, 28, 0.1)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} dy={8} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(value) => [`${value}개`, '오류 라벨']} />
+                <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                  {stats.defectStats.slice(0, 8).map((entry) => (
+                    <Cell key={entry.key} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyPanel label="오류 데이터가 없습니다." />
+          )}
         </section>
       </div>
 
