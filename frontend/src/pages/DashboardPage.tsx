@@ -29,7 +29,7 @@ export default function DashboardPage() {
     <div className="p-6 space-y-6 overflow-y-auto h-full">
 
       {/* 페이지 제목 */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 rounded-xl border border-Black-10% bg-white px-5 py-4 shadow-sm">
         <div>
           <h2 className="text-lg font-bold text-Black-100%">실시간 대시보드</h2>
           <p className="text-xs text-Black-40% mt-0.5">
@@ -56,7 +56,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 3행: 실시간 이력 테이블 */}
-      <div>
+      <div className="rounded-xl border border-Black-10% bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-Black-100%">최근 검사 이력</h2>
           <span className="text-xs text-Black-40%">최근 15건</span>

@@ -30,7 +30,7 @@ export default function Header() {
     : '--:--:--'
 
   return (
-    <header className="h-14 px-7 py-5 border-b border-Black-10% flex justify-between items-center bg-Background-1 shrink-0">
+    <header className="h-14 px-7 py-5 border-b border-Black-10% flex justify-between items-center bg-white/95 shadow-[0_6px_18px_rgba(28,28,28,0.035)] shrink-0">
 
       {/* 좌측: 사이드바 토글 + 즐겨찾기 + breadcrumb */}
       <div className="flex items-center gap-2">
@@ -55,7 +55,7 @@ export default function Header() {
       <div className="flex items-center gap-5">
 
         {/* 검색 */}
-        <div className="w-40 px-2 py-1 bg-Black-4% rounded-2xl flex items-center gap-2">
+        <div className="w-40 px-2 py-1 bg-[#F4F6F8] border border-Black-10% rounded-2xl flex items-center gap-2">
           <Search size={14} className="text-Black-20%" />
           <span className="flex-1 text-sm text-Black-20% leading-5">Search</span>
           <span className="w-5 text-center text-xs text-Black-20% rounded border border-Black-10% leading-4">/</span>

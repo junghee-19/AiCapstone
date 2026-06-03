@@ -24,13 +24,13 @@ export default function App() {
   useTheme()
 
   return (
-    <div className="flex h-screen bg-Background-1 text-Black-100% overflow-hidden">
+    <div className="flex h-screen bg-[#F4F6F8] text-Black-100% overflow-hidden">
 
       <Sidebar />
 
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto bg-Background-1">
+        <main className="flex-1 overflow-y-auto bg-[#F4F6F8]">
           <Routes>
             <Route path="/"                element={<DashboardPage />} />
             <Route path="/history"         element={<HistoryPage />} />

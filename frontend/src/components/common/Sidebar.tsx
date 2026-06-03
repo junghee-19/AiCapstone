@@ -44,20 +44,20 @@ const NAV_ITEMS = [
 
 function navClass(isActive: boolean) {
   return clsx(
-    'flex items-center gap-4 px-2 py-2 rounded-xl text-sm font-normal transition-colors',
+    'flex items-center gap-4 px-2 py-2 rounded-xl text-sm font-normal transition-colors border border-transparent',
     isActive
-      ? 'bg-Black-4% text-Black-100%'
-      : 'text-Black-100% hover:bg-Black-4%',
+      ? 'bg-white text-Black-100% border-Black-10% shadow-sm'
+      : 'text-Black-80% hover:bg-white hover:border-Black-10%',
   )
 }
 
 export default function Sidebar() {
   return (
-    <aside className="w-52 h-full p-4 border-r border-Black-10% flex flex-col gap-2 shrink-0 bg-Background-1">
+    <aside className="w-52 h-full p-4 border-r border-Black-10% flex flex-col gap-2 shrink-0 bg-[#F9FAFB] shadow-[8px_0_24px_rgba(28,28,28,0.03)]">
 
       <div className="pb-3 flex flex-col gap-1">
         <div className="p-2 flex items-center gap-2">
-          <div className="w-6 h-6 bg-Black-4% rounded-full flex items-center justify-center">
+          <div className="w-6 h-6 bg-white border border-Black-10% rounded-full flex items-center justify-center shadow-sm">
             <Cpu size={14} className="text-Black-100%" />
           </div>
           <span className="text-sm text-Black-100% font-mono font-bold leading-5">DeepSight</span>
