@@ -33,7 +33,11 @@ _STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "pi-touchscreen"
 @router.get("/", summary="터치스크린 메인 HTML")
 async def serve_index() -> FileResponse:
     """터치스크린 브라우저(키오스크)가 처음 열 페이지."""
-    return FileResponse(str(_STATIC_DIR / "index.html"), media_type="text/html")
+    return FileResponse(
+        str(_STATIC_DIR / "index.html"),
+        media_type="text/html",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
+    )
 
 
 @router.post("/dismiss", summary="결과 화면 닫고 라이브 화면으로 복귀")

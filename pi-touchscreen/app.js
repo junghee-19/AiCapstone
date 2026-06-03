@@ -66,6 +66,7 @@
     'ic_chip',
     'edge_connector_zone',
   ])
+  const normalizeType = (t) => String(t || '').trim().toLowerCase()
   const colorOf = (t) => {
     if (!t) return '#ef4444'
     if (t.startsWith('MISSING:')) {
@@ -105,10 +106,10 @@
   const isCountOnlyMissing = (d) =>
     d?.defectType?.startsWith('MISSING:') && !missingPositionOf(d.defectType)
   const isProblemDefect = (d) => {
-    const t = d?.defectType
+    const t = String(d?.defectType || '').trim()
     if (!t) return false
     if (t.startsWith('MISSING:') || t.startsWith('ANOMALY:')) return true
-    return !NORMAL_COMPONENT_TYPES.has(t.toLowerCase())
+    return !NORMAL_COMPONENT_TYPES.has(normalizeType(t))
   }
 
   // ── SSE ────────────────────────────────────────────────────────────────
