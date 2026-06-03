@@ -11,7 +11,7 @@
  * - 클릭으로 상세 DefectViewer 연동
  */
 
-import { Fragment, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ChevronDown, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react'
 import clsx from 'clsx'
 import type { InspectionLog } from '@/types/inspection'
@@ -217,99 +217,101 @@ export default function InspectionTable({
                 const isOpen = selectedId === log.id
                 const toggle = () => setSelectedId(isOpen ? undefined : log.id)
                 return (
-                  <Fragment key={log.id}>
-                    <tr
-                      className={clsx(
-                        'bg-white hover:bg-Black-4% cursor-pointer transition-colors',
-                        isOpen && 'bg-Black-4%'
-                      )}
-                      onClick={toggle}
-                    >
-                      {/* ID */}
-                      <td className="px-4 py-3 font-mono text-xs text-Black-40%">
-                        #{log.id}
-                      </td>
-
-                      {/* 시각 */}
-                      <td className="px-4 py-3">
-                        <p className="text-Black-80% text-xs">{date}</p>
-                        <p className="text-Black-40% text-xs font-mono">{time}</p>
-                      </td>
-
-                      {/* 디바이스 */}
-                      <td className="px-4 py-3 text-xs text-Black-40% font-mono">
-                        {log.deviceId}
-                      </td>
-
-                      {/* 결과 뱃지 */}
-                      <td className="px-4 py-3">
-                        <ResultBadge result={log.result} />
-                      </td>
-
-                      {/* 결함 태그 */}
-                      <td className="px-4 py-3">
-                        <DefectTags defects={log.defects} />
-                      </td>
-
-                      {/* 피듀셜 중심 좌표 (deskew 후 좌표계) */}
-                      <td
-                        className="px-4 py-3 text-[11px] text-Black-100% font-mono leading-snug max-w-[14rem]"
-                        title="보정 이미지 기준 피듀셜 중심 (px)"
-                      >
-                        {formatFiducialCells(log)}
-                      </td>
-
-                      {/* 오차 각도 */}
-                      <td className="px-4 py-3 text-xs text-Black-40% font-mono">
-                        {log.angleErrorDeg != null
-                          ? `${log.angleErrorDeg.toFixed(2)}°`
-                          : '—'}
-                      </td>
-
-                      {/* 추론 시간 */}
-                      <td className="px-4 py-3 text-xs text-Black-40% font-mono">
-                        {log.inferenceTimeMs != null ? `${log.inferenceTimeMs}ms` : '—'}
-                      </td>
-
-                      {/* 상세 토글 버튼 */}
-                      <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          aria-label={isOpen ? '상세 닫기' : '상세 열기'}
-                          onClick={(e) => { e.stopPropagation(); toggle() }}
-                          className="p-1 rounded hover:bg-Black-10% transition-colors"
-                        >
-                          <ChevronDown
-                            size={16}
-                            className={clsx(
-                              'transition-transform',
-                              isOpen ? 'rotate-180 text-indigo-600' : 'text-Black-40%'
-                            )}
-                          />
-                        </button>
-                      </td>
-                    </tr>
-
-                    {/* 펼침: 행 바로 아래 인라인 상세 패널 */}
-                    {isOpen && (
-                      <tr className="bg-Black-4%">
-                        <td colSpan={TABLE_COL_COUNT} className="p-0">
-                          <div className="p-4">
-                            <DefectViewer
-                              inspectionId={log.id}
-                              onClose={() => setSelectedId(undefined)}
-                            />
-                          </div>
-                        </td>
-                      </tr>
+                  <tr
+                    key={log.id}
+                    className={clsx(
+                      'bg-white hover:bg-Black-4% cursor-pointer transition-colors',
+                      isOpen && 'bg-Black-4%'
                     )}
-                  </Fragment>
+                    onClick={toggle}
+                  >
+                    {/* ID */}
+                    <td className="px-4 py-3 font-mono text-xs text-Black-40%">
+                      #{log.id}
+                    </td>
+
+                    {/* 시각 */}
+                    <td className="px-4 py-3">
+                      <p className="text-Black-80% text-xs">{date}</p>
+                      <p className="text-Black-40% text-xs font-mono">{time}</p>
+                    </td>
+
+                    {/* 디바이스 */}
+                    <td className="px-4 py-3 text-xs text-Black-40% font-mono">
+                      {log.deviceId}
+                    </td>
+
+                    {/* 결과 뱃지 */}
+                    <td className="px-4 py-3">
+                      <ResultBadge result={log.result} />
+                    </td>
+
+                    {/* 결함 태그 */}
+                    <td className="px-4 py-3">
+                      <DefectTags defects={log.defects} />
+                    </td>
+
+                    {/* 피듀셜 중심 좌표 (deskew 후 좌표계) */}
+                    <td
+                      className="px-4 py-3 text-[11px] text-Black-100% font-mono leading-snug max-w-[14rem]"
+                      title="보정 이미지 기준 피듀셜 중심 (px)"
+                    >
+                      {formatFiducialCells(log)}
+                    </td>
+
+                    {/* 오차 각도 */}
+                    <td className="px-4 py-3 text-xs text-Black-40% font-mono">
+                      {log.angleErrorDeg != null
+                        ? `${log.angleErrorDeg.toFixed(2)}°`
+                        : '—'}
+                    </td>
+
+                    {/* 추론 시간 */}
+                    <td className="px-4 py-3 text-xs text-Black-40% font-mono">
+                      {log.inferenceTimeMs != null ? `${log.inferenceTimeMs}ms` : '—'}
+                    </td>
+
+                    {/* 상세 토글 버튼 */}
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        aria-label={isOpen ? '상세 닫기' : '상세 열기'}
+                        onClick={(e) => { e.stopPropagation(); toggle() }}
+                        className="p-1 rounded hover:bg-Black-10% transition-colors"
+                      >
+                        <ChevronDown
+                          size={16}
+                          className={clsx(
+                            'transition-transform',
+                            isOpen ? 'rotate-180 text-indigo-600' : 'text-Black-40%'
+                          )}
+                        />
+                      </button>
+                    </td>
+                  </tr>
                 )
               })
             )}
           </tbody>
         </table>
       </div>
+
+      {selectedId !== undefined && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-Black-40% p-4"
+          onClick={() => setSelectedId(undefined)}
+        >
+          <div
+            className="max-h-[calc(100vh-2rem)] w-full max-w-6xl overflow-y-auto rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DefectViewer
+              inspectionId={selectedId}
+              onClose={() => setSelectedId(undefined)}
+            />
+          </div>
+        </div>
+      )}
 
     </>
   )
