@@ -16,7 +16,6 @@
 
 import StatCardGroup from '@/components/dashboard/StatCard'
 import PassFailChart from '@/components/dashboard/PassFailChart'
-import FailRateTrendChart from '@/components/dashboard/FailRateTrendChart'
 import TrendChart from '@/components/dashboard/TrendChart'
 import InspectionTable from '@/components/inspection/InspectionTable'
 import { useRecentInspections } from '@/hooks/useInspectionData'
@@ -49,10 +48,6 @@ export default function DashboardPage() {
         <div className="lg:col-span-3">
           <TrendChart />
         </div>
-      </div>
-
-      <div>
-        <FailRateTrendChart />
       </div>
 
       {/* 3행: 실시간 이력 테이블 */}

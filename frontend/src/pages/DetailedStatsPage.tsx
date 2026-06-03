@@ -7,6 +7,7 @@ import {
   Activity, AlertTriangle, CalendarDays, CheckCircle2, Clock3, Filter, Gauge, Percent,
 } from 'lucide-react'
 import { useAllInspections } from '@/hooks/useInspectionData'
+import FailRateTrendChart from '@/components/dashboard/FailRateTrendChart'
 import { defectColor, defectDisplayName } from '@/types/inspection'
 import type { DefectDetail, InspectionLog, InspectionResultType } from '@/types/inspection'
 
@@ -454,6 +455,10 @@ export default function DetailedStatsPage() {
           </div>
         </section>
       </div>
+
+      <section>
+        <FailRateTrendChart />
+      </section>
     </div>
   )
 }
