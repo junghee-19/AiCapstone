@@ -2,6 +2,10 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-04 | Board reference image update | [2026-06-04_board-reference-image-update.md](2026-06-04_board-reference-image-update.md) |
+| 2026-06-04 | Board reference count correction | [2026-06-04_board-reference-count-correction.md](2026-06-04_board-reference-count-correction.md) |
+| 2026-06-04 | Board reference detected label counts | [2026-06-04_board-reference-detected-label-counts.md](2026-06-04_board-reference-detected-label-counts.md) |
+| 2026-06-04 | Outcome chart height | [2026-06-04_outcome-chart-height.md](2026-06-04_outcome-chart-height.md) |
 | 2026-06-03 | Defect viewer duplicate helper fix | [2026-06-03_defect-viewer-duplicate-helper-fix.md](2026-06-03_defect-viewer-duplicate-helper-fix.md) |
 | 2026-06-03 | Trend chart sizing | [2026-06-03_trend-chart-sizing.md](2026-06-03_trend-chart-sizing.md) |
 | 2026-06-03 | Stat card boundaries | [2026-06-03_stat-card-boundaries.md](2026-06-03_stat-card-boundaries.md) |

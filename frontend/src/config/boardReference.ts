@@ -20,7 +20,7 @@ export const BOARD_REFERENCES: BoardReference[] = [
       gold_finger_row: 2,
       ic_chip: 8,
       smd_array_block: 2,
-      edge_connector_zone: 1,
+      edge_connector_zone: 2,
     },
   },
 ]

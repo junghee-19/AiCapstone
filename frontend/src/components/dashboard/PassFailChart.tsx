@@ -71,7 +71,7 @@ export default function PassFailChart() {
   /* 로딩 스켈레톤 */
   if (isLoading || !stats) {
     return (
-      <div className="flex h-80 items-center justify-center rounded-[20px] border border-Black-10% bg-white p-6 animate-pulse">
+      <div className="flex min-h-[23rem] items-center justify-center rounded-[20px] border border-Black-10% bg-white p-6 animate-pulse">
         <div className="h-52 w-52 rounded-full bg-white/10" />
       </div>
     )
@@ -84,7 +84,7 @@ export default function PassFailChart() {
   ]
 
   return (
-    <div className="h-80 overflow-hidden rounded-[20px] border border-Black-10% bg-white p-6 shadow-sm">
+    <div className="min-h-[23rem] overflow-hidden rounded-[20px] border border-Black-10% bg-white p-6 shadow-sm">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-Black-100%">Inspection Outcome</h2>
