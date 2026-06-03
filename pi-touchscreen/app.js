@@ -346,7 +346,7 @@
       const wrap = canvas.parentElement
       const maxW = wrap.clientWidth
       const maxH = wrap.clientHeight
-      const crop = buildPcbCrop(img, defects, fiducials, maxW / maxH)
+      const crop = buildPcbCrop(img, defects, fiducials)
       const ratio = Math.min(maxW / crop.width, maxH / crop.height)
       canvas.width = Math.round(crop.width * ratio)
       canvas.height = Math.round(crop.height * ratio)
@@ -373,7 +373,7 @@
     img.src = url
   }
 
-  function buildPcbCrop(img, defects, fiducials, targetAspect) {
+  function buildPcbCrop(img, defects, fiducials) {
     let minX = Number.POSITIVE_INFINITY
     let minY = Number.POSITIVE_INFINITY
     let maxX = Number.NEGATIVE_INFINITY
@@ -409,21 +409,16 @@
       return { x: 0, y: 0, width: img.naturalWidth, height: img.naturalHeight }
     }
 
-    const pad = Math.max(70, Math.max(contentW, contentH) * 0.22)
+    const pad = Math.max(38, Math.max(contentW, contentH) * 0.14)
     minX = clamp(minX - pad, 0, img.naturalWidth)
     minY = clamp(minY - pad, 0, img.naturalHeight)
     maxX = clamp(maxX + pad, 0, img.naturalWidth)
     maxY = clamp(maxY + pad, 0, img.naturalHeight)
 
-    let cropW = maxX - minX
-    let cropH = maxY - minY
+    const cropW = maxX - minX
+    const cropH = maxY - minY
     const cx = (minX + maxX) / 2
     const cy = (minY + maxY) / 2
-    if (cropW / cropH < targetAspect) {
-      cropW = Math.min(img.naturalWidth, cropH * targetAspect)
-    } else {
-      cropH = Math.min(img.naturalHeight, cropW / targetAspect)
-    }
 
     const x = clamp(cx - cropW / 2, 0, img.naturalWidth - cropW)
     const y = clamp(cy - cropH / 2, 0, img.naturalHeight - cropH)

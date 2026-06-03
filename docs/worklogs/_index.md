@@ -2,6 +2,7 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-03 | Pi touchscreen PCB zoom | [2026-06-03_pi-touchscreen-pcb-zoom.md](2026-06-03_pi-touchscreen-pcb-zoom.md) |
 | 2026-06-03 | Pi touchscreen PCB crop result | [2026-06-03_pi-touchscreen-pcb-crop-result.md](2026-06-03_pi-touchscreen-pcb-crop-result.md) |
 | 2026-06-03 | Pi touchscreen result contrast | [2026-06-03_pi-touchscreen-result-contrast.md](2026-06-03_pi-touchscreen-result-contrast.md) |
 | 2026-06-03 | Pi touchscreen result cache bust | [2026-06-03_pi-touchscreen-result-cache-bust.md](2026-06-03_pi-touchscreen-result-cache-bust.md) |
