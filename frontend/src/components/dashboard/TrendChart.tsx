@@ -59,9 +59,9 @@ export default function TrendChart() {
   /* 로딩 스켈레톤 */
   if (isLoading) {
     return (
-      <div className="h-80 rounded-[20px] border border-Black-10% bg-white p-6 animate-pulse">
+      <div className="min-h-[23rem] rounded-[20px] border border-Black-10% bg-white p-6 animate-pulse">
         <div className="mb-4 h-5 w-36 rounded bg-white/10" />
-        <div className="h-[248px] rounded-2xl bg-Black-10%" />
+        <div className="h-[260px] rounded-2xl bg-Black-10%" />
       </div>
     )
   }
@@ -69,14 +69,14 @@ export default function TrendChart() {
   /* 데이터 없음 안내 */
   if (!trendData.length) {
     return (
-      <div className="flex h-80 items-center justify-center rounded-[20px] border border-Black-10% bg-white p-6">
+      <div className="flex min-h-[23rem] items-center justify-center rounded-[20px] border border-Black-10% bg-white p-6">
         <p className="text-sm text-Black-40%">최근 24시간 검사 데이터가 없습니다.</p>
       </div>
     )
   }
 
   return (
-    <div className="h-80 min-w-0 overflow-hidden rounded-[20px] border border-Black-10% bg-white p-6 shadow-sm">
+    <div className="min-h-[23rem] min-w-0 overflow-hidden rounded-[20px] border border-Black-10% bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="flex flex-wrap items-center gap-4 rounded-lg bg-Black-4% px-1 py-1">
           <button
@@ -90,10 +90,10 @@ export default function TrendChart() {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={248}>
+      <ResponsiveContainer width="100%" height={260}>
         <BarChart
           data={trendData}
-          margin={{ top: 8, right: 8, left: -24, bottom: 0 }}
+          margin={{ top: 8, right: 8, left: -20, bottom: 18 }}
           barCategoryGap="28%"
           barSize={16}
         >
