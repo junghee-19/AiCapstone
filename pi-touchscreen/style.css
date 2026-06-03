@@ -93,9 +93,10 @@ body[data-status="RESULT"] .screen-result { display: flex; flex-direction: colum
 
 .brand-block h1 {
   color: var(--ink);
-  font-size: clamp(42px, 8vw, 72px);
+  font-size: clamp(44px, 7vw, 60px);
   line-height: 0.98;
   letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .status-panel {
@@ -119,7 +120,6 @@ body[data-status="RESULT"] .screen-result { display: flex; flex-direction: colum
 }
 
 .connection-pill,
-.auto-state,
 .server-url {
   min-height: 34px;
   display: inline-flex;
@@ -433,6 +433,10 @@ body[data-auto="running"][data-status="RESULT"] .floating-stop {
 
   .home-shell {
     grid-template-columns: 1fr;
+  }
+
+  .brand-block h1 {
+    white-space: normal;
   }
 
   .primary-action {

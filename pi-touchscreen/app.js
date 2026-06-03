@@ -185,9 +185,11 @@
       cooldownRemainingSeconds = Number(autoResult.value.cooldown_remaining_seconds || 0)
       captureHoldRemainingSeconds = Number(autoResult.value.capture_hold_remaining_seconds || 0)
       body.dataset.auto = autoRunning ? 'running' : 'stopped'
-      autoState.textContent = autoRunning
-        ? statusTextForAuto(autoResult.value)
-        : '중지됨'
+      if (autoState) {
+        autoState.textContent = autoRunning
+          ? statusTextForAuto(autoResult.value)
+          : '중지됨'
+      }
       updateLiveBadge(autoResult.value)
       setLiveStreamEnabled(autoRunning)
     } else {
@@ -195,7 +197,7 @@
       cooldownRemainingSeconds = 0
       captureHoldRemainingSeconds = 0
       body.dataset.auto = 'stopped'
-      autoState.textContent = '상태 확인 실패'
+      if (autoState) autoState.textContent = '상태 확인 실패'
       updateLiveBadge(null)
       setLiveStreamEnabled(false)
     }
