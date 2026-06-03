@@ -111,6 +111,7 @@
     if (t.startsWith('MISSING:') || t.startsWith('ANOMALY:')) return true
     return !NORMAL_COMPONENT_TYPES.has(normalizeType(t))
   }
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
   // ── SSE ────────────────────────────────────────────────────────────────
   const events = new EventSource('/touch/events')
@@ -342,18 +343,28 @@
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
-      // 캔버스 크기를 이미지 비율에 맞춤
       const wrap = canvas.parentElement
       const maxW = wrap.clientWidth
       const maxH = wrap.clientHeight
-      const ratio = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1)
-      canvas.width = Math.round(img.naturalWidth * ratio)
-      canvas.height = Math.round(img.naturalHeight * ratio)
+      const crop = buildPcbCrop(img, defects, fiducials, maxW / maxH)
+      const ratio = Math.min(maxW / crop.width, maxH / crop.height)
+      canvas.width = Math.round(crop.width * ratio)
+      canvas.height = Math.round(crop.height * ratio)
 
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      ctx.drawImage(
+        img,
+        crop.x,
+        crop.y,
+        crop.width,
+        crop.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      )
 
       if (result === 'FAIL' && defects.length) {
-        drawDefectBoxes(defects, ratio)
+        drawDefectBoxes(defects, { ratio, offsetX: crop.x, offsetY: crop.y })
       }
     }
     img.onerror = () => {
@@ -362,8 +373,66 @@
     img.src = url
   }
 
+  function buildPcbCrop(img, defects, fiducials, targetAspect) {
+    let minX = Number.POSITIVE_INFINITY
+    let minY = Number.POSITIVE_INFINITY
+    let maxX = Number.NEGATIVE_INFINITY
+    let maxY = Number.NEGATIVE_INFINITY
+    const addBox = (x, y, w, h) => {
+      if (![x, y, w, h].every(Number.isFinite) || w <= 1 || h <= 1) return
+      minX = Math.min(minX, x)
+      minY = Math.min(minY, y)
+      maxX = Math.max(maxX, x + w)
+      maxY = Math.max(maxY, y + h)
+    }
+    const addPoint = (x, y, pad = 34) => {
+      if (![x, y].every(Number.isFinite)) return
+      addBox(x - pad, y - pad, pad * 2, pad * 2)
+    }
+
+    defects.forEach((d) => {
+      if (!isCountOnlyMissing(d)) {
+        addBox(Number(d.bboxX), Number(d.bboxY), Number(d.bboxWidth), Number(d.bboxHeight))
+      }
+      const missingPosition = missingPositionOf(d.defectType)
+      if (missingPosition) addPoint(missingPosition.x, missingPosition.y, 42)
+    })
+    fiducials.forEach((f) => addPoint(Number(f.x), Number(f.y), 46))
+
+    if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
+      return { x: 0, y: 0, width: img.naturalWidth, height: img.naturalHeight }
+    }
+
+    const contentW = maxX - minX
+    const contentH = maxY - minY
+    if (contentW < 40 || contentH < 40) {
+      return { x: 0, y: 0, width: img.naturalWidth, height: img.naturalHeight }
+    }
+
+    const pad = Math.max(70, Math.max(contentW, contentH) * 0.22)
+    minX = clamp(minX - pad, 0, img.naturalWidth)
+    minY = clamp(minY - pad, 0, img.naturalHeight)
+    maxX = clamp(maxX + pad, 0, img.naturalWidth)
+    maxY = clamp(maxY + pad, 0, img.naturalHeight)
+
+    let cropW = maxX - minX
+    let cropH = maxY - minY
+    const cx = (minX + maxX) / 2
+    const cy = (minY + maxY) / 2
+    if (cropW / cropH < targetAspect) {
+      cropW = Math.min(img.naturalWidth, cropH * targetAspect)
+    } else {
+      cropH = Math.min(img.naturalHeight, cropW / targetAspect)
+    }
+
+    const x = clamp(cx - cropW / 2, 0, img.naturalWidth - cropW)
+    const y = clamp(cy - cropH / 2, 0, img.naturalHeight - cropH)
+    return { x, y, width: cropW, height: cropH }
+  }
+
   // ── 결함 박스 + 라벨 그리기 (대시보드 DefectBox 와 동일 스타일) ────────────
-  function drawDefectBoxes(defects, ratio) {
+  function drawDefectBoxes(defects, view) {
+    const { ratio, offsetX, offsetY } = view
     const problemDefects = defects.filter(isProblemDefect)
     const drawableDefects = problemDefects.filter((d) => !isCountOnlyMissing(d))
     const summaryDefects = problemDefects.filter((d) => isCountOnlyMissing(d))
@@ -375,8 +444,8 @@
     ctx.textBaseline = 'top'
 
     drawableDefects.forEach((d) => {
-      const x = d.bboxX * ratio
-      const y = d.bboxY * ratio
+      const x = (d.bboxX - offsetX) * ratio
+      const y = (d.bboxY - offsetY) * ratio
       const w = d.bboxWidth * ratio
       const h = d.bboxHeight * ratio
       const color = colorOf(d.defectType)
@@ -390,8 +459,8 @@
       ctx.setLineDash([])
 
       if (missingPosition) {
-        const cx = missingPosition.x * ratio
-        const cy = missingPosition.y * ratio
+        const cx = (missingPosition.x - offsetX) * ratio
+        const cy = (missingPosition.y - offsetY) * ratio
         const cross = Math.max(8, canvas.width / 80)
         ctx.lineWidth = Math.max(1.5, stroke * 0.8)
         ctx.beginPath()
