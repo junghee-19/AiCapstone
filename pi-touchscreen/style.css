@@ -327,7 +327,7 @@ body[data-auto="running"][data-status="RESULT"] .floating-stop {
   padding: 0;
   align-items: stretch;
   justify-content: stretch;
-  background: #0b0f17;
+  background: #0b0f17 !important;
   overflow: hidden;
 }
 
@@ -417,10 +417,11 @@ body[data-auto="running"][data-status="RESULT"] .floating-stop {
 }
 
 .result-canvas-wrap {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  width: auto;
-  height: auto;
+  z-index: 1;
+  width: 100vw;
+  height: 100vh;
   min-height: 0;
   display: flex;
   align-items: center;
@@ -474,6 +475,7 @@ body[data-result="FAIL"] .result-canvas-wrap {
   max-width: 100%;
   max-height: 100%;
   display: block;
+  background: #0b0f17;
 }
 
 @media (max-width: 640px) {

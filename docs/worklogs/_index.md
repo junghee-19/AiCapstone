@@ -2,6 +2,7 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-03 | Pi touchscreen result visible fix | [2026-06-03_pi-touchscreen-result-visible-fix.md](2026-06-03_pi-touchscreen-result-visible-fix.md) |
 | 2026-06-03 | Pi touchscreen result fullscreen fix | [2026-06-03_pi-touchscreen-result-fullscreen-fix.md](2026-06-03_pi-touchscreen-result-fullscreen-fix.md) |
 | 2026-06-03 | Pi touchscreen result overlay | [2026-06-03_pi-touchscreen-result-overlay.md](2026-06-03_pi-touchscreen-result-overlay.md) |
 | 2026-06-03 | Pi touchscreen PCB zoom | [2026-06-03_pi-touchscreen-pcb-zoom.md](2026-06-03_pi-touchscreen-pcb-zoom.md) |

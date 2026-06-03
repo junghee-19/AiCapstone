@@ -345,8 +345,8 @@
     img.crossOrigin = 'anonymous'
     img.onload = () => {
       const wrap = canvas.parentElement
-      const maxW = wrap.clientWidth
-      const maxH = wrap.clientHeight
+      const maxW = wrap.clientWidth || window.innerWidth || 800
+      const maxH = wrap.clientHeight || window.innerHeight || 480
       const crop = buildPcbCrop(img, defects, fiducials)
       const ratio = Math.min(maxW / crop.width, maxH / crop.height)
       canvas.width = Math.round(crop.width * ratio)
@@ -370,6 +370,14 @@
     }
     img.onerror = () => {
       console.warn('[touch] 결과 이미지 로드 실패:', url)
+      canvas.width = window.innerWidth || 800
+      canvas.height = window.innerHeight || 480
+      ctx.fillStyle = '#0b0f17'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillStyle = '#cbd5e1'
+      ctx.font = '22px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('결과 이미지 로드 실패', canvas.width / 2, canvas.height / 2)
     }
     img.src = url
   }
