@@ -63,24 +63,25 @@ body[data-status="BUSY"] .screen-busy { display: flex; }
 body[data-status="RESULT"] .screen-result { display: flex; flex-direction: column; }
 
 .screen-home {
-  padding: 28px;
+  padding: 32px 56px;
   background:
     linear-gradient(180deg, rgba(28, 28, 28, 0.02), rgba(28, 28, 28, 0.04)),
     var(--bg);
 }
 
 .home-shell {
-  width: min(720px, 100%);
+  width: min(688px, 100%);
+  height: 100%;
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
-  grid-template-rows: auto auto;
-  gap: 18px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 24px;
   align-items: stretch;
 }
 
 .brand-block {
   align-self: center;
-  padding: 8px;
+  padding: 10px 0;
 }
 
 .kicker {
@@ -100,9 +101,10 @@ body[data-status="RESULT"] .screen-result { display: flex; flex-direction: colum
 }
 
 .status-panel {
+  align-self: center;
   display: grid;
-  gap: 12px;
-  padding: 18px;
+  gap: 16px;
+  padding: 22px;
   background: var(--panel);
   border: 1px solid var(--ink-10);
   border-radius: 8px;
@@ -154,7 +156,7 @@ body[data-edge="offline"] .connection-pill .dot { background: var(--fail); }
 
 .primary-action {
   grid-column: 1 / -1;
-  min-height: 104px;
+  min-height: 112px;
   border: 1px solid rgba(34, 197, 94, 0.28);
   border-radius: 8px;
   background: var(--soft-green);
@@ -428,7 +430,7 @@ body[data-auto="running"][data-status="RESULT"] .floating-stop {
 
 @media (max-width: 640px) {
   .screen-home {
-    padding: 20px;
+    padding: 24px;
   }
 
   .home-shell {
