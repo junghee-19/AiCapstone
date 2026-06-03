@@ -2,6 +2,7 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-03 | Stat card boundaries | [2026-06-03_stat-card-boundaries.md](2026-06-03_stat-card-boundaries.md) |
 | 2026-06-03 | Frontend visual hierarchy | [2026-06-03_frontend-visual-hierarchy.md](2026-06-03_frontend-visual-hierarchy.md) |
 | 2026-06-03 | Pi touchscreen result red overlay | [2026-06-03_pi-touchscreen-result-red-overlay.md](2026-06-03_pi-touchscreen-result-red-overlay.md) |
 | 2026-06-03 | Pi touchscreen result visible fix | [2026-06-03_pi-touchscreen-result-visible-fix.md](2026-06-03_pi-touchscreen-result-visible-fix.md) |

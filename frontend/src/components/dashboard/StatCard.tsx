@@ -28,10 +28,16 @@ const BG_CLASS: Record<StatCardProps['bg'], string> = {
 
 function StatCard({ title, value, icon: Icon, bg, caption }: StatCardProps) {
   return (
-    <div className={clsx('rounded-2xl p-6 flex flex-col', BG_CLASS[bg])}>
+    <div
+      className={clsx(
+        'rounded-2xl border border-Black-10% p-6 flex flex-col shadow-sm',
+        'ring-1 ring-white/70 shadow-[0_10px_28px_rgba(28,28,28,0.06)]',
+        BG_CLASS[bg],
+      )}
+    >
       <div className="flex items-center justify-between">
         <span className="text-sm text-Black-100% leading-5 font-semibold">{title}</span>
-        <div className="w-9 h-9 rounded-lg bg-white/60 flex items-center justify-center">
+        <div className="w-9 h-9 rounded-lg bg-white/80 border border-white shadow-sm flex items-center justify-center">
           <Icon size={18} className="text-Black-100%" />
         </div>
       </div>
@@ -47,7 +53,7 @@ function StatCard({ title, value, icon: Icon, bg, caption }: StatCardProps) {
 
 function StatCardSkeleton() {
   return (
-    <div className="bg-Black-4% rounded-2xl p-6 animate-pulse">
+    <div className="bg-white border border-Black-10% rounded-2xl p-6 shadow-sm animate-pulse">
       <div className="flex items-center justify-between mb-3">
         <div className="h-4 w-20 bg-Black-10% rounded" />
         <div className="w-9 h-9 bg-Black-10% rounded-lg" />
