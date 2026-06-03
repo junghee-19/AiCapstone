@@ -58,6 +58,14 @@
     ic_chip:               'IC',
     edge_connector_zone:   '에지 커넥터',
   }
+  const NORMAL_COMPONENT_TYPES = new Set([
+    'mount_hole',
+    'gold_finger_row',
+    'fiducial',
+    'smd_array_block',
+    'ic_chip',
+    'edge_connector_zone',
+  ])
   const colorOf = (t) => {
     if (!t) return '#ef4444'
     if (t.startsWith('MISSING:')) {
@@ -96,6 +104,12 @@
   }
   const isCountOnlyMissing = (d) =>
     d?.defectType?.startsWith('MISSING:') && !missingPositionOf(d.defectType)
+  const isProblemDefect = (d) => {
+    const t = d?.defectType
+    if (!t) return false
+    if (t.startsWith('MISSING:') || t.startsWith('ANOMALY:')) return true
+    return !NORMAL_COMPONENT_TYPES.has(t.toLowerCase())
+  }
 
   // ── SSE ────────────────────────────────────────────────────────────────
   const events = new EventSource('/touch/events')
@@ -349,8 +363,9 @@
 
   // ── 결함 박스 + 라벨 그리기 (대시보드 DefectBox 와 동일 스타일) ────────────
   function drawDefectBoxes(defects, ratio) {
-    const drawableDefects = defects.filter((d) => !isCountOnlyMissing(d))
-    const summaryDefects = defects.filter((d) => isCountOnlyMissing(d))
+    const problemDefects = defects.filter(isProblemDefect)
+    const drawableDefects = problemDefects.filter((d) => !isCountOnlyMissing(d))
+    const summaryDefects = problemDefects.filter((d) => isCountOnlyMissing(d))
     const stroke = Math.max(2, canvas.width / 360)
     const fontSize = Math.max(10, Math.round(canvas.width / 86))
     ctx.lineWidth = stroke
