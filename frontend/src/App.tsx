@@ -34,7 +34,8 @@ export default function App() {
         <main className="flex-1 overflow-y-auto bg-[#F4F6F8]">
           <Routes>
             <Route path="/"                element={<DashboardPage />} />
-            <Route path="/stats"           element={<DetailedStatsPage />} />
+            <Route path="/detailed-stats"  element={<DetailedStatsPage />} />
+            <Route path="/stats"           element={<Navigate to="/detailed-stats" replace />} />
             <Route path="/history"         element={<HistoryPage />} />
             <Route path="/board-reference" element={<BoardReferencePage />} />
 

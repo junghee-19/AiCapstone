@@ -7,6 +7,7 @@
  * 데이터는 useTrendData() 훅이 전체 이력에서 시간 단위로 집계하여 제공한다.
  */
 
+import { useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -17,6 +18,7 @@ import { useTrendData } from '@/hooks/useInspectionData'
 /* 파스텔 톤 — 라이트 테마 가독성 */
 const PASS_COLOR = '#86EFAC'  // pastel green
 const FAIL_COLOR = '#FCA5A5'  // pastel red
+type TrendMode = 'all' | 'pass' | 'fail'
 
 // ── 커스텀 툴팁 ───────────────────────────────────────────────────────────────
 
@@ -55,6 +57,7 @@ function CustomTooltip({
 
 export default function TrendChart() {
   const { data: trendData, isLoading } = useTrendData()
+  const [mode, setMode] = useState<TrendMode>('all')
 
   /* 로딩 스켈레톤 */
   if (isLoading) {
@@ -75,24 +78,53 @@ export default function TrendChart() {
     )
   }
 
+  const chartData = trendData.map((point) => ({
+    ...point,
+    pass: mode === 'fail' ? 0 : point.pass,
+    fail: mode === 'pass' ? 0 : point.fail,
+  }))
+
+  const modeButtonClass = (value: TrendMode) => [
+    'rounded-lg px-3 py-1.5 text-sm transition-colors',
+    mode === value
+      ? 'bg-white font-semibold text-Black-100% shadow-sm'
+      : 'text-Black-40% hover:bg-white/70 hover:text-Black-80%',
+  ].join(' ')
+
   return (
     <div className="min-h-[23rem] min-w-0 overflow-hidden rounded-[20px] border border-Black-10% bg-white p-6 shadow-sm">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap items-center gap-4 rounded-lg bg-Black-4% px-1 py-1">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-1 rounded-lg bg-Black-4% p-1">
           <button
             type="button"
-            className="rounded-xl bg-white px-3 py-1.5 text-sm font-semibold text-Black-100% shadow-sm"
+            onClick={() => setMode('all')}
+            className={modeButtonClass('all')}
           >
             Inspection Trend
           </button>
-          <span className="px-1 text-sm text-Black-40%">PASS</span>
-          <span className="px-1 text-sm text-Black-40%">FAIL</span>
+          <button
+            type="button"
+            onClick={() => setMode('pass')}
+            className={modeButtonClass('pass')}
+          >
+            PASS
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('fail')}
+            className={modeButtonClass('fail')}
+          >
+            FAIL
+          </button>
+        </div>
+        <div className="pt-2 text-xs text-Black-40%">
+          {mode === 'all' ? 'PASS / FAIL 누적' : mode === 'pass' ? 'PASS만 표시' : 'FAIL만 표시'}
         </div>
       </div>
 
       <ResponsiveContainer width="100%" height={260}>
         <BarChart
-          data={trendData}
+          data={chartData}
           margin={{ top: 8, right: 8, left: -20, bottom: 18 }}
           barCategoryGap="28%"
           barSize={16}
@@ -128,8 +160,12 @@ export default function TrendChart() {
               <span style={{ color: '#1C1C1C', fontSize: '0.75rem' }}>{value}</span>
             )}
           />
-          <Bar dataKey="pass" name="PASS" stackId="stack" fill={PASS_COLOR} radius={[8, 8, 0, 0]} />
-          <Bar dataKey="fail" name="FAIL" stackId="stack" fill={FAIL_COLOR} radius={[8, 8, 0, 0]} />
+          {mode !== 'fail' && (
+            <Bar dataKey="pass" name="PASS" stackId="stack" fill={PASS_COLOR} radius={[8, 8, 0, 0]} />
+          )}
+          {mode !== 'pass' && (
+            <Bar dataKey="fail" name="FAIL" stackId="stack" fill={FAIL_COLOR} radius={[8, 8, 0, 0]} />
+          )}
         </BarChart>
       </ResponsiveContainer>
     </div>

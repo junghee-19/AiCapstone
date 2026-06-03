@@ -17,7 +17,7 @@ const NAV_ITEMS = [
     end:   true,  // 루트 경로 정확히 매칭 (하위 경로에서 active 방지)
   },
   {
-    to:    '/stats',
+    to:    '/detailed-stats',
     icon:  BarChart2,
     label: '상세 통계',
     end:   false,

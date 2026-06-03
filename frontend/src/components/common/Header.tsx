@@ -15,6 +15,7 @@ import { useStats } from '@/hooks/useInspectionData'
 /** 경로별 breadcrumb 라벨 */
 const ROUTE_LABEL: Record<string, string> = {
   '/':                '대시보드',
+  '/detailed-stats':  '상세 통계',
   '/stats':           '상세 통계',
   '/history':         '검사 이력',
   '/board-reference': 'PCB 정보',

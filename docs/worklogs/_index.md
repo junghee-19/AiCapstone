@@ -2,6 +2,9 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-04 | Trend chart header alignment | [2026-06-04_trend-chart-header-alignment.md](2026-06-04_trend-chart-header-alignment.md) |
+| 2026-06-04 | Detailed stats route fix | [2026-06-04_detailed-stats-route-fix.md](2026-06-04_detailed-stats-route-fix.md) |
+| 2026-06-04 | Trend chart mode controls | [2026-06-04_trend-chart-mode-controls.md](2026-06-04_trend-chart-mode-controls.md) |
 | 2026-06-04 | Detection time detail layout | [2026-06-04_detection-time-detail-layout.md](2026-06-04_detection-time-detail-layout.md) |
 | 2026-06-04 | Remove detailed stat pie charts | [2026-06-04_remove-detailed-stat-pie-charts.md](2026-06-04_remove-detailed-stat-pie-charts.md) |
 | 2026-06-04 | Dashboard statistics separation | [2026-06-04_dashboard-statistics-separation.md](2026-06-04_dashboard-statistics-separation.md) |
