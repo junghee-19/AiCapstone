@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <title>PCB 검사 — 라즈베리파이 터치스크린</title>
-  <link rel="stylesheet" href="/touch/static/style.css?v=20260603-result-visible" />
+  <link rel="stylesheet" href="/touch/static/style.css?v=20260603-result-red-overlay" />
 </head>
 <body data-status="IDLE" data-auto="stopped" data-edge="checking">
 
@@ -61,19 +61,21 @@
     <div class="result-canvas-wrap">
       <canvas id="result-canvas"></canvas>
     </div>
-    <div class="result-header" id="result-header">
-      <span id="result-text">PASS</span>
-    </div>
-    <div class="result-countdown" id="result-countdown">
-      <span id="result-countdown-text">곧 라이브 화면으로 돌아갑니다</span>
-      <div class="countdown-track">
-        <div class="countdown-fill" id="result-countdown-fill"></div>
+    <div class="result-overlay-panel">
+      <div class="result-header" id="result-header">
+        <span id="result-text">PASS</span>
+      </div>
+      <div class="result-countdown" id="result-countdown">
+        <span id="result-countdown-text">곧 라이브 화면으로 돌아갑니다</span>
+        <div class="countdown-track">
+          <div class="countdown-fill" id="result-countdown-fill"></div>
+        </div>
       </div>
     </div>
   </section>
 
   <button id="stop-auto-floating" class="floating-stop" type="button">검사 중지</button>
 
-  <script src="/touch/static/app.js?v=20260603-result-visible"></script>
+  <script src="/touch/static/app.js?v=20260603-result-red-overlay"></script>
 </body>
 </html>
