@@ -107,6 +107,85 @@ function buildPcbCrop(log: InspectionLog, imageSize: { w: number; h: number }): 
  * 엣지 `alignment.compute_alignment`: 피듀셜이 2개 미만이면 angle_error_deg = 999.
  * 이 경우 Stage2(결함) 검사는 실행되지 않으며, 결함 박스 데이터도 없다.
  */
+interface CropRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function missingPositionOf(defectType: string): { x: number; y: number } | null {
+  const m = defectType.match(/expected_at=\(([\d.-]+),([\d.-]+)\)/)
+  if (!m) return null
+  const x = Number(m[1])
+  const y = Number(m[2])
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null
+}
+
+function isCountOnlyMissing(defectType: string): boolean {
+  return defectType.startsWith('MISSING:') && !missingPositionOf(defectType)
+}
+
+function buildPcbCrop(log: InspectionLog, imageSize: { w: number; h: number }): CropRect {
+  let minX = Number.POSITIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
+
+  const addBox = (x: number, y: number, w: number, h: number) => {
+    if (![x, y, w, h].every(Number.isFinite) || w <= 1 || h <= 1) return
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxX = Math.max(maxX, x + w)
+    maxY = Math.max(maxY, y + h)
+  }
+
+  const addPoint = (x: number | null | undefined, y: number | null | undefined, pad = 46) => {
+    if (x == null || y == null || !Number.isFinite(x) || !Number.isFinite(y)) return
+    addBox(x - pad, y - pad, pad * 2, pad * 2)
+  }
+
+  log.defects.forEach((d) => {
+    if (!isCountOnlyMissing(d.defectType)) {
+      addBox(Number(d.bboxX), Number(d.bboxY), Number(d.bboxWidth), Number(d.bboxHeight))
+    }
+    const missingPosition = missingPositionOf(d.defectType)
+    if (missingPosition) addPoint(missingPosition.x, missingPosition.y, 42)
+  })
+  addPoint(log.fiducial1X, log.fiducial1Y)
+  addPoint(log.fiducial2X, log.fiducial2Y)
+
+  const imageW = Math.max(1, imageSize.w)
+  const imageH = Math.max(1, imageSize.h)
+  if (![minX, minY, maxX, maxY].every(Number.isFinite)) {
+    return { x: 0, y: 0, width: imageW, height: imageH }
+  }
+
+  const contentW = maxX - minX
+  const contentH = maxY - minY
+  if (contentW < 40 || contentH < 40) {
+    return { x: 0, y: 0, width: imageW, height: imageH }
+  }
+
+  const pad = Math.max(38, Math.max(contentW, contentH) * 0.14)
+  minX = clamp(minX - pad, 0, imageW)
+  minY = clamp(minY - pad, 0, imageH)
+  maxX = clamp(maxX + pad, 0, imageW)
+  maxY = clamp(maxY + pad, 0, imageH)
+
+  const cropW = Math.max(1, maxX - minX)
+  const cropH = Math.max(1, maxY - minY)
+  const cx = (minX + maxX) / 2
+  const cy = (minY + maxY) / 2
+  const x = clamp(cx - cropW / 2, 0, imageW - cropW)
+  const y = clamp(cy - cropH / 2, 0, imageH - cropH)
+  return { x, y, width: cropW, height: cropH }
+}
+
 function isFiducialAlignmentSentinel(log: InspectionLog): boolean {
   const a = log.angleErrorDeg
   return a != null && a >= 500

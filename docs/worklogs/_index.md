@@ -5,6 +5,8 @@
 | 2026-06-03 | Stat card boundaries | [2026-06-03_stat-card-boundaries.md](2026-06-03_stat-card-boundaries.md) |
 | 2026-06-03 | Frontend visual hierarchy | [2026-06-03_frontend-visual-hierarchy.md](2026-06-03_frontend-visual-hierarchy.md) |
 | 2026-06-03 | Dashboard PCB zoom | [2026-06-03_dashboard-pcb-zoom.md](2026-06-03_dashboard-pcb-zoom.md) |
+| 2026-06-03 | History detail modal PCB zoom | [2026-06-03_history-detail-modal-pcb-zoom.md](2026-06-03_history-detail-modal-pcb-zoom.md) |
+| 2026-06-03 | History detail modal | [2026-06-03_history-detail-modal.md](2026-06-03_history-detail-modal.md) |
 | 2026-06-03 | Pi touchscreen result red overlay | [2026-06-03_pi-touchscreen-result-red-overlay.md](2026-06-03_pi-touchscreen-result-red-overlay.md) |
 | 2026-06-03 | Pi touchscreen result visible fix | [2026-06-03_pi-touchscreen-result-visible-fix.md](2026-06-03_pi-touchscreen-result-visible-fix.md) |
 | 2026-06-03 | Pi touchscreen result fullscreen fix | [2026-06-03_pi-touchscreen-result-fullscreen-fix.md](2026-06-03_pi-touchscreen-result-fullscreen-fix.md) |
