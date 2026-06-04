@@ -56,7 +56,9 @@ from inference.alignment import (
 from inference.yolo_detector import YoloDetector
 from models.schemas import (
     AlignmentResult,
+    BoundingBox,
     DefectPayload,
+    DetectionItem,
     InspectionPacket,
     InspectionResult,
 )
@@ -80,6 +82,24 @@ def _fiducial_confidences(alignment: AlignmentResult) -> tuple[Optional[float], 
     f1 = float(alignment.fiducial1.confidence) if alignment.fiducial1 else None
     f2 = float(alignment.fiducial2.confidence) if alignment.fiducial2 else None
     return f1, f2
+
+
+def _offset_detection_items(items: list[DetectionItem], offset_x: float, offset_y: float) -> list[DetectionItem]:
+    if offset_x == 0 and offset_y == 0:
+        return items
+    return [
+        DetectionItem(
+            defect_type=item.defect_type,
+            confidence=item.confidence,
+            bbox=BoundingBox(
+                x=item.bbox.x + offset_x,
+                y=item.bbox.y + offset_y,
+                width=item.bbox.width,
+                height=item.bbox.height,
+            ),
+        )
+        for item in items
+    ]
 
 
 def _save_frame(frame: np.ndarray, save_dir: Optional[Path] = None) -> str:
@@ -881,7 +901,7 @@ def _run_production_vision_pipeline(
                 position_missing = check_missing_components(
                     reference,
                     current_alignment=alignment,
-                    current_detections=defect_items,
+                    current_detections=_offset_detection_items(defect_items, roi_x, roi_y),
                     tolerance_px=settings.REFERENCE_MATCH_TOLERANCE_PX,
                 )
                 if position_missing:

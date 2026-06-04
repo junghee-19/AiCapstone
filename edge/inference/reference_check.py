@@ -131,6 +131,59 @@ def _similarity_transform(
     return transform
 
 
+def _transform_bbox(bbox: dict, transform) -> dict[str, float]:
+    x = float(bbox.get("x", 0.0))
+    y = float(bbox.get("y", 0.0))
+    w = float(bbox.get("width", 0.0))
+    h = float(bbox.get("height", 0.0))
+    points = [
+        transform(x, y),
+        transform(x + w, y),
+        transform(x + w, y + h),
+        transform(x, y + h),
+    ]
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    return {
+        "x": min_x,
+        "y": min_y,
+        "width": max(1.0, max_x - min_x),
+        "height": max(1.0, max_y - min_y),
+    }
+
+
+def _bbox_iou(a: dict[str, float], b: BoundingBox) -> float:
+    ax1 = float(a["x"])
+    ay1 = float(a["y"])
+    ax2 = ax1 + float(a["width"])
+    ay2 = ay1 + float(a["height"])
+    bx1 = b.x
+    by1 = b.y
+    bx2 = b.x + b.width
+    by2 = b.y + b.height
+
+    inter_w = max(0.0, min(ax2, bx2) - max(ax1, bx1))
+    inter_h = max(0.0, min(ay2, by2) - max(ay1, by1))
+    inter = inter_w * inter_h
+    if inter <= 0:
+        return 0.0
+
+    area_a = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
+    area_b = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
+    union = area_a + area_b - inter
+    return inter / union if union > 0 else 0.0
+
+
+def _center_in_expanded_bbox(detection: DetectionItem, expected_bbox: dict[str, float], tolerance_px: float) -> bool:
+    x1 = float(expected_bbox["x"]) - tolerance_px
+    y1 = float(expected_bbox["y"]) - tolerance_px
+    x2 = float(expected_bbox["x"]) + float(expected_bbox["width"]) + tolerance_px
+    y2 = float(expected_bbox["y"]) + float(expected_bbox["height"]) + tolerance_px
+    return x1 <= detection.center_x <= x2 and y1 <= detection.center_y <= y2
+
+
 def check_missing_components(
     reference: dict,
     *,
@@ -201,35 +254,54 @@ def check_missing_components(
         rx = float(bbox.get("x", 0.0)) + float(bbox.get("width", 0.0)) / 2.0
         ry = float(bbox.get("y", 0.0)) + float(bbox.get("height", 0.0)) / 2.0
         ex_x, ex_y = transform(rx, ry)
+        expected_bbox = _transform_bbox(bbox, transform)
 
         candidates = by_class.get(cls, [])
         used = used_by_class.setdefault(cls, set())
         best_idx = -1
         best_dist = float("inf")
+        best_iou = 0.0
+        nearest_dist = float("inf")
+        nearest_iou = 0.0
         for idx, d in enumerate(candidates):
             if idx in used:
                 continue
             dist = math.hypot(d.center_x - ex_x, d.center_y - ex_y)
-            if dist < best_dist:
+            iou = _bbox_iou(expected_bbox, d.bbox)
+            if dist < nearest_dist:
+                nearest_dist = dist
+                nearest_iou = iou
+            center_in_expected = _center_in_expanded_bbox(d, expected_bbox, tolerance_px)
+            location_matches = dist <= tolerance_px and (center_in_expected or iou > 0.0)
+            if location_matches and (best_idx < 0 or dist < best_dist):
                 best_dist = dist
+                best_iou = iou
                 best_idx = idx
 
-        if best_idx >= 0 and best_dist <= tolerance_px:
+        if best_idx >= 0:
             used.add(best_idx)
+            logger.debug(
+                "[reference] matched class=%s expected=(%.0f,%.0f) dist=%.1fpx iou=%.3f",
+                cls,
+                ex_x,
+                ex_y,
+                best_dist,
+                best_iou,
+            )
             continue
 
         # 매칭 실패 → MISSING 으로 기록
         logger.warning(
             "[레퍼런스] 누락 감지: class=%s, 예상위치=(%.0f,%.0f), 최근접거리=%.1fpx (허용=%.1fpx)",
-            cls, ex_x, ex_y, best_dist, tolerance_px,
+            cls, ex_x, ex_y, nearest_dist, tolerance_px,
         )
-        size_w = max(20.0, float(bbox.get("width", 30.0)))
-        size_h = max(20.0, float(bbox.get("height", 30.0)))
+        size_w = max(20.0, float(expected_bbox.get("width", bbox.get("width", 30.0))))
+        size_h = max(20.0, float(expected_bbox.get("height", bbox.get("height", 30.0))))
         missing.append(DefectPayload(
-            defect_type=f"MISSING:{cls}:expected_at=({ex_x:.0f},{ex_y:.0f}),nearest={best_dist:.1f}px",
+            defect_type=f"MISSING:{cls}:expected_at=({ex_x:.0f},{ex_y:.0f}),nearest={nearest_dist:.1f}px,iou={nearest_iou:.3f}",
             confidence=1.0,
-            bbox_x=max(0.0, ex_x - size_w / 2.0),
-            bbox_y=max(0.0, ex_y - size_h / 2.0),
+            bbox_x=max(0.0, float(expected_bbox.get("x", ex_x - size_w / 2.0))),
+            bbox_y=max(0.0, float(expected_bbox.get("y", ex_y - size_h / 2.0))),
             bbox_width=size_w,
             bbox_height=size_h,
         ))

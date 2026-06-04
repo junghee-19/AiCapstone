@@ -2,6 +2,7 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-04 | Reference position missing check | [2026-06-04_reference-position-missing-check.md](2026-06-04_reference-position-missing-check.md) |
 | 2026-06-04 | Edge background guide worker | [2026-06-04_edge-background-guide-worker.md](2026-06-04_edge-background-guide-worker.md) |
 | 2026-06-04 | Edge camera device path | [2026-06-04_edge-camera-device-path.md](2026-06-04_edge-camera-device-path.md) |
 | 2026-06-04 | History default desc sort | [2026-06-04_history-default-desc-sort.md](2026-06-04_history-default-desc-sort.md) |
