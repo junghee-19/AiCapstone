@@ -241,6 +241,8 @@ def check_missing_components(
     ref_classes: dict[str, int] = {}
     for c in reference.get("components", []):
         cls = str(c["class"]).lower()
+        if "fiducial" in cls:
+            continue
         ref_classes[cls] = ref_classes.get(cls, 0) + 1
     logger.info("[위치검증][debug] reference class counts: %s", ref_classes)
 
@@ -250,6 +252,8 @@ def check_missing_components(
 
     for ref_comp in reference.get("components", []):
         cls = str(ref_comp["class"]).lower()
+        if "fiducial" in cls:
+            continue
         bbox = ref_comp.get("bbox", {})
         rx = float(bbox.get("x", 0.0)) + float(bbox.get("width", 0.0)) / 2.0
         ry = float(bbox.get("y", 0.0)) + float(bbox.get("height", 0.0)) / 2.0
