@@ -162,9 +162,9 @@ export function defectDisplayName(defectType: string): string {
       return `${clsKorean} 누락 (기대 ${expected}개, 검출 ${detected}개, 누락 ${missing}개)`
     }
     // ── Position Check — 위치 기반 누락 ───────────────────────────────────
-    // 예: "MISSING:ic_chip:expected_at=(833,203),nearest=125.5px"
+    // 예: "MISSING:ic_chip:expected_at=(833,203),nearest=125.5px,iou=0.000"
     const mPos = defectType.match(
-      /^MISSING:([^:]+):expected_at=\(([\d.-]+),([\d.-]+)\),nearest=([\d.]+|inf)px$/
+      /^MISSING:([^:]+):expected_at=\(([\d.-]+),([\d.-]+)\),nearest=([\d.]+|inf)px(?:,iou=([\d.]+))?$/
     )
     if (mPos) {
       const [, rawCls, x, y, nearest] = mPos

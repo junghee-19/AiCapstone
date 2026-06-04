@@ -1,0 +1,134 @@
+{
+  "device_id": "GT_125A",
+  "image_path": "frontend/public/board-ref/gt125a_ref.png",
+  "fiducial1": {
+    "x": 100.5,
+    "y": 458.5
+  },
+  "fiducial2": {
+    "x": 710.5,
+    "y": 102.5
+  },
+  "components": [
+    {
+      "id": "mount_hole_1",
+      "class": "mount_hole",
+      "confidence": 1.0,
+      "bbox": { "x": 74, "y": 39, "width": 36, "height": 36 }
+    },
+    {
+      "id": "mount_hole_2",
+      "class": "mount_hole",
+      "confidence": 1.0,
+      "bbox": { "x": 695, "y": 36, "width": 37, "height": 37 }
+    },
+    {
+      "id": "mount_hole_3",
+      "class": "mount_hole",
+      "confidence": 1.0,
+      "bbox": { "x": 83, "y": 482, "width": 35, "height": 36 }
+    },
+    {
+      "id": "mount_hole_4",
+      "class": "mount_hole",
+      "confidence": 1.0,
+      "bbox": { "x": 698, "y": 470, "width": 36, "height": 36 }
+    },
+    {
+      "id": "fiducial_1",
+      "class": "fiducial",
+      "confidence": 1.0,
+      "bbox": { "x": 88, "y": 446, "width": 25, "height": 25 }
+    },
+    {
+      "id": "fiducial_2",
+      "class": "fiducial",
+      "confidence": 1.0,
+      "bbox": { "x": 698, "y": 90, "width": 25, "height": 25 }
+    },
+    {
+      "id": "gold_finger_row_1",
+      "class": "gold_finger_row",
+      "confidence": 1.0,
+      "bbox": { "x": 143, "y": 236, "width": 516, "height": 40 }
+    },
+    {
+      "id": "gold_finger_row_2",
+      "class": "gold_finger_row",
+      "confidence": 1.0,
+      "bbox": { "x": 144, "y": 281, "width": 520, "height": 42 }
+    },
+    {
+      "id": "ic_chip_1",
+      "class": "ic_chip",
+      "confidence": 1.0,
+      "bbox": { "x": 193, "y": 92, "width": 60, "height": 84 }
+    },
+    {
+      "id": "ic_chip_2",
+      "class": "ic_chip",
+      "confidence": 1.0,
+      "bbox": { "x": 255, "y": 92, "width": 61, "height": 84 }
+    },
+    {
+      "id": "ic_chip_3",
+      "class": "ic_chip",
+      "confidence": 1.0,
+      "bbox": { "x": 318, "y": 92, "width": 60, "height": 84 }
+    },
+    {
+      "id": "ic_chip_4",
+      "class": "ic_chip",
+      "confidence": 1.0,
+      "bbox": { "x": 381, "y": 92, "width": 59, "height": 84 }
+    },
+    {
+      "id": "ic_chip_5",
+      "class": "ic_chip",
+      "confidence": 1.0,
+      "bbox": { "x": 232, "y": 419, "width": 63, "height": 55 }
+    },
+    {
+      "id": "ic_chip_6",
+      "class": "ic_chip",
+      "confidence": 1.0,
+      "bbox": { "x": 296, "y": 419, "width": 62, "height": 55 }
+    },
+    {
+      "id": "ic_chip_7",
+      "class": "ic_chip",
+      "confidence": 1.0,
+      "bbox": { "x": 358, "y": 419, "width": 61, "height": 55 }
+    },
+    {
+      "id": "ic_chip_8",
+      "class": "ic_chip",
+      "confidence": 1.0,
+      "bbox": { "x": 421, "y": 420, "width": 61, "height": 54 }
+    },
+    {
+      "id": "smd_array_block_1",
+      "class": "smd_array_block",
+      "confidence": 1.0,
+      "bbox": { "x": 192, "y": 168, "width": 465, "height": 68 }
+    },
+    {
+      "id": "smd_array_block_2",
+      "class": "smd_array_block",
+      "confidence": 1.0,
+      "bbox": { "x": 165, "y": 322, "width": 499, "height": 70 }
+    },
+    {
+      "id": "edge_connector_zone_1",
+      "class": "edge_connector_zone",
+      "confidence": 1.0,
+      "bbox": { "x": 465, "y": 22, "width": 117, "height": 33 }
+    },
+    {
+      "id": "edge_connector_zone_2",
+      "class": "edge_connector_zone",
+      "confidence": 1.0,
+      "bbox": { "x": 475, "y": 500, "width": 112, "height": 40 }
+    }
+  ]
+}

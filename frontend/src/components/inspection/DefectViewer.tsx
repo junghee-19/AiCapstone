@@ -47,6 +47,10 @@ function isCountOnlyMissing(defectType: string): boolean {
   return defectType.startsWith('MISSING:') && !missingPositionOf(defectType)
 }
 
+function missingClassOf(defectType: string): string {
+  return defectType.startsWith('MISSING:') ? defectType.split(':')[1] ?? defectType : defectType
+}
+
 function buildPcbCrop(log: InspectionLog, imageSize: { w: number; h: number }): CropRect {
   let minX = Number.POSITIVE_INFINITY
   let minY = Number.POSITIVE_INFINITY
@@ -276,6 +280,66 @@ function DefectBox({
   )
 }
 
+function MissingBox({
+  x,
+  y,
+  w,
+  h,
+  label,
+  color,
+  scaleX,
+  scaleY,
+}: {
+  x: number
+  y: number
+  w: number
+  h: number
+  label: string
+  color: string
+  scaleX: number
+  scaleY: number
+}) {
+  const sx = x * scaleX
+  const sy = y * scaleY
+  const sw = Math.max(16, w * scaleX)
+  const sh = Math.max(16, h * scaleY)
+  const cx = sx + sw / 2
+  const cy = sy + sh / 2
+  const cap = `정상 위치: ${label}`
+  const tw = Math.min(240, Math.max(112, cap.length * 7.4))
+  const ty = sy > 26 ? sy - 24 : sy + sh + 5
+
+  return (
+    <g>
+      <rect
+        x={sx}
+        y={sy}
+        width={sw}
+        height={sh}
+        rx={2}
+        fill="rgba(248,113,113,0.16)"
+        stroke={color}
+        strokeWidth={2.5}
+        strokeDasharray="8 5"
+      />
+      <line x1={sx} y1={sy} x2={sx + sw} y2={sy + sh} stroke={color} strokeWidth={1.8} opacity={0.9} />
+      <line x1={sx + sw} y1={sy} x2={sx} y2={sy + sh} stroke={color} strokeWidth={1.8} opacity={0.9} />
+      <circle cx={cx} cy={cy} r={5} fill={color} stroke="rgba(255,255,255,0.92)" strokeWidth={1.5} />
+      <rect x={sx} y={ty} width={tw} height={19} rx={4} fill="rgba(127,29,29,0.9)" stroke={color} strokeWidth={1.1} />
+      <text
+        x={sx + 7}
+        y={ty + 13}
+        fill="#fee2e2"
+        fontSize={11}
+        fontWeight={800}
+        fontFamily="ui-monospace, monospace"
+      >
+        {cap}
+      </text>
+    </g>
+  )
+}
+
 // ── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
 interface DefectViewerProps {
@@ -331,6 +395,7 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
   const defects = log?.defects ?? []
   const overlayDefects = defects.filter((d) => !d.defectType.startsWith('MISSING:'))
   const missingReasons = defects.filter((d) => d.defectType.startsWith('MISSING:'))
+  const overlayMissing = missingReasons.filter((d) => !isCountOnlyMissing(d.defectType))
 
   /* 오버레이는 보정 후 이미지 기준 */
   const imgRef = useRef<HTMLImageElement>(null)
@@ -500,6 +565,19 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                             scaleY={scaleY}
                           />
                         ))}
+                        {overlayMissing.map((d, i) => (
+                          <MissingBox
+                            key={`missing-${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
+                            x={d.bboxX}
+                            y={d.bboxY}
+                            w={d.bboxWidth}
+                            h={d.bboxHeight}
+                            label={defectDisplayName(missingClassOf(d.defectType))}
+                            color={defectColor(d.defectType)}
+                            scaleX={scaleX}
+                            scaleY={scaleY}
+                          />
+                        ))}
                       </svg>
                     </>
                   ) : (
@@ -572,6 +650,19 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                       h={d.bboxHeight}
                       label={defectDisplayName(d.defectType)}
                       confidence={d.confidence}
+                      color={defectColor(d.defectType)}
+                      scaleX={1}
+                      scaleY={1}
+                    />
+                  ))}
+                  {overlayMissing.map((d, i) => (
+                    <MissingBox
+                      key={`missing-${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
+                      x={d.bboxX}
+                      y={d.bboxY}
+                      w={d.bboxWidth}
+                      h={d.bboxHeight}
+                      label={defectDisplayName(missingClassOf(d.defectType))}
                       color={defectColor(d.defectType)}
                       scaleX={1}
                       scaleY={1}
@@ -671,11 +762,26 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
               <div className="mt-3 rounded-md border border-red-900/50 bg-red-950/25 px-3 py-2">
                 <h4 className="text-[11px] font-semibold text-red-300 mb-1">FAIL 원인</h4>
                 <ul className="space-y-1">
-                  {missingReasons.map((d, i) => (
-                    <li key={`${d.defectType}-${i}`} className="text-[11px] text-red-200">
-                      - {defectDisplayName(d.defectType)}
-                    </li>
-                  ))}
+                  {missingReasons.map((d, i) => {
+                    const pos = missingPositionOf(d.defectType)
+                    const cx = Math.round(d.bboxX + d.bboxWidth / 2)
+                    const cy = Math.round(d.bboxY + d.bboxHeight / 2)
+                    return (
+                      <li key={`${d.defectType}-${i}`} className="text-[11px] text-red-200">
+                        <div>- {defectDisplayName(d.defectType)}</div>
+                        {pos && (
+                          <div className="mt-0.5 pl-2 font-mono text-red-100/90">
+                            정상 위치: ({Math.round(pos.x)}, {Math.round(pos.y)}) / bbox ({Math.round(d.bboxX)}, {Math.round(d.bboxY)}, {Math.round(d.bboxWidth)}x{Math.round(d.bboxHeight)})
+                          </div>
+                        )}
+                        {!pos && !isCountOnlyMissing(d.defectType) && (
+                          <div className="mt-0.5 pl-2 font-mono text-red-100/90">
+                            정상 위치: ({cx}, {cy})
+                          </div>
+                        )}
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             )}

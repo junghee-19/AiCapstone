@@ -2,6 +2,8 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-05 | Edge reference profile deploy | [2026-06-05_edge-reference-profile-deploy.md](2026-06-05_edge-reference-profile-deploy.md) |
+| 2026-06-04 | Missing component normal position overlay | [2026-06-04_missing-component-normal-position-overlay.md](2026-06-04_missing-component-normal-position-overlay.md) |
 | 2026-06-04 | Board reference component coordinates | [2026-06-04_board-reference-component-coordinates.md](2026-06-04_board-reference-component-coordinates.md) |
 | 2026-06-04 | Reference position missing check | [2026-06-04_reference-position-missing-check.md](2026-06-04_reference-position-missing-check.md) |
 | 2026-06-04 | Edge background guide worker | [2026-06-04_edge-background-guide-worker.md](2026-06-04_edge-background-guide-worker.md) |
