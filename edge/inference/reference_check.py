@@ -184,76 +184,27 @@ def _center_in_expanded_bbox(detection: DetectionItem, expected_bbox: dict[str, 
     return x1 <= detection.center_x <= x2 and y1 <= detection.center_y <= y2
 
 
-def check_missing_components(
-    reference: dict,
-    *,
-    current_alignment: AlignmentResult,
-    current_detections: list[DetectionItem],
+def _reference_components(reference: dict) -> list[dict]:
+    return [
+        c for c in reference.get("components", [])
+        if "fiducial" not in str(c.get("class", "")).lower()
+    ]
+
+
+def _match_reference_components(
+    components: list[dict],
+    by_class: dict[str, list[DetectionItem]],
+    transform,
     tolerance_px: float,
-) -> list[DefectPayload]:
-    """
-    레퍼런스 부품 위치를 현재 이미지로 투영하고, 매칭되는 검출이 없으면 MISSING 으로 반환.
-
-    Args:
-        reference: load_reference() 결과
-        current_alignment: 현재 검사의 정렬 정보 (fiducial 2개 필요)
-        current_detections: 현재 Stage 2 검출 (fiducial 제외)
-        tolerance_px: 매칭 허용 반경 (변환된 좌표 기준)
-
-    Returns:
-        MISSING DefectPayload 목록 (없으면 빈 리스트)
-    """
-    if current_alignment.fiducial1 is None or current_alignment.fiducial2 is None:
-        logger.warning("[레퍼런스] 현재 fiducial 부족 — 위치 검증 건너뜀")
-        return []
-
-    ref_f1 = (reference["fiducial1"]["x"], reference["fiducial1"]["y"])
-    ref_f2 = (reference["fiducial2"]["x"], reference["fiducial2"]["y"])
-    cur_f1 = (current_alignment.fiducial1.center_x, current_alignment.fiducial1.center_y)
-    cur_f2 = (current_alignment.fiducial2.center_x, current_alignment.fiducial2.center_y)
-
-    transform = _similarity_transform(ref_f1, ref_f2, cur_f1, cur_f2)
-
-    # ── 디버그 — 변환 + 매칭 후보 풀 출력 ────────────────────────────────
-    logger.info(
-        "[위치검증][debug] ref_F1=%s ref_F2=%s cur_F1=%s cur_F2=%s",
-        ref_f1, ref_f2, cur_f1, cur_f2,
-    )
-    tx, ty = transform(0.0, 0.0)
-    tx1, ty1 = transform(100.0, 0.0)
-    logger.info(
-        "[위치검증][debug] transform 검증: (0,0)→(%.1f,%.1f), (100,0)→(%.1f,%.1f)",
-        tx, ty, tx1, ty1,
-    )
-
-    # 같은 클래스의 검출만 매칭 후보 — 클래스별로 묶어두면 빠름
-    by_class: dict[str, list[DetectionItem]] = {}
-    for d in current_detections:
-        cls = d.defect_type.lower()
-        if "fiducial" in cls:
-            continue
-        by_class.setdefault(cls, []).append(d)
-
-    logger.info(
-        "[위치검증][debug] current detections by class: %s",
-        {k: [(round(d.center_x, 1), round(d.center_y, 1)) for d in v] for k, v in by_class.items()},
-    )
-    ref_classes: dict[str, int] = {}
-    for c in reference.get("components", []):
-        cls = str(c["class"]).lower()
-        if "fiducial" in cls:
-            continue
-        ref_classes[cls] = ref_classes.get(cls, 0) + 1
-    logger.info("[위치검증][debug] reference class counts: %s", ref_classes)
-
-    # 클래스별로 따로 — 같은 idx 값이 클래스 간에 충돌하지 않도록 격리
+    orientation_label: str,
+) -> tuple[list[DefectPayload], int, float]:
     used_by_class: dict[str, set[int]] = {}
     missing: list[DefectPayload] = []
+    matched = 0
+    total_distance = 0.0
 
-    for ref_comp in reference.get("components", []):
+    for ref_comp in components:
         cls = str(ref_comp["class"]).lower()
-        if "fiducial" in cls:
-            continue
         bbox = ref_comp.get("bbox", {})
         rx = float(bbox.get("x", 0.0)) + float(bbox.get("width", 0.0)) / 2.0
         ry = float(bbox.get("y", 0.0)) + float(bbox.get("height", 0.0)) / 2.0
@@ -284,8 +235,11 @@ def check_missing_components(
 
         if best_idx >= 0:
             used.add(best_idx)
+            matched += 1
+            total_distance += best_dist
             logger.debug(
-                "[reference] matched class=%s expected=(%.0f,%.0f) dist=%.1fpx iou=%.3f",
+                "[reference] matched orientation=%s class=%s expected=(%.0f,%.0f) dist=%.1fpx iou=%.3f",
+                orientation_label,
                 cls,
                 ex_x,
                 ex_y,
@@ -294,10 +248,9 @@ def check_missing_components(
             )
             continue
 
-        # 매칭 실패 → MISSING 으로 기록
-        logger.warning(
-            "[레퍼런스] 누락 감지: class=%s, 예상위치=(%.0f,%.0f), 최근접거리=%.1fpx (허용=%.1fpx)",
-            cls, ex_x, ex_y, nearest_dist, tolerance_px,
+        logger.debug(
+            "[레퍼런스] 누락 후보(%s): class=%s, 예상위치=(%.0f,%.0f), 최근접거리=%.1fpx (허용=%.1fpx)",
+            orientation_label, cls, ex_x, ex_y, nearest_dist, tolerance_px,
         )
         size_w = max(20.0, float(expected_bbox.get("width", bbox.get("width", 30.0))))
         size_h = max(20.0, float(expected_bbox.get("height", bbox.get("height", 30.0))))
@@ -310,7 +263,101 @@ def check_missing_components(
             bbox_height=size_h,
         ))
 
-    return missing
+    return missing, matched, total_distance
+
+
+def check_missing_components(
+    reference: dict,
+    *,
+    current_alignment: AlignmentResult,
+    current_detections: list[DetectionItem],
+    tolerance_px: float,
+) -> list[DefectPayload]:
+    """
+    레퍼런스 부품 위치를 현재 이미지로 투영하고, 매칭되는 검출이 없으면 MISSING 으로 반환.
+
+    Args:
+        reference: load_reference() 결과
+        current_alignment: 현재 검사의 정렬 정보 (fiducial 2개 필요)
+        current_detections: 현재 Stage 2 검출 (fiducial 제외)
+        tolerance_px: 매칭 허용 반경 (변환된 좌표 기준)
+
+    Returns:
+        MISSING DefectPayload 목록 (없으면 빈 리스트)
+    """
+    if current_alignment.fiducial1 is None or current_alignment.fiducial2 is None:
+        logger.warning("[레퍼런스] 현재 fiducial 부족 — 위치 검증 건너뜀")
+        return []
+
+    ref_f1 = (reference["fiducial1"]["x"], reference["fiducial1"]["y"])
+    ref_f2 = (reference["fiducial2"]["x"], reference["fiducial2"]["y"])
+    cur_f1 = (current_alignment.fiducial1.center_x, current_alignment.fiducial1.center_y)
+    cur_f2 = (current_alignment.fiducial2.center_x, current_alignment.fiducial2.center_y)
+
+    transform = _similarity_transform(ref_f1, ref_f2, cur_f1, cur_f2)
+    transform_180 = _similarity_transform(ref_f1, ref_f2, cur_f2, cur_f1)
+
+    # ── 디버그 — 변환 + 매칭 후보 풀 출력 ────────────────────────────────
+    logger.info(
+        "[위치검증][debug] ref_F1=%s ref_F2=%s cur_F1=%s cur_F2=%s",
+        ref_f1, ref_f2, cur_f1, cur_f2,
+    )
+    tx, ty = transform(0.0, 0.0)
+    tx1, ty1 = transform(100.0, 0.0)
+    logger.info(
+        "[위치검증][debug] transform 검증: (0,0)→(%.1f,%.1f), (100,0)→(%.1f,%.1f)",
+        tx, ty, tx1, ty1,
+    )
+
+    # 같은 클래스의 검출만 매칭 후보 — 클래스별로 묶어두면 빠름
+    by_class: dict[str, list[DetectionItem]] = {}
+    for d in current_detections:
+        cls = d.defect_type.lower()
+        if "fiducial" in cls:
+            continue
+        by_class.setdefault(cls, []).append(d)
+
+    logger.info(
+        "[위치검증][debug] current detections by class: %s",
+        {k: [(round(d.center_x, 1), round(d.center_y, 1)) for d in v] for k, v in by_class.items()},
+    )
+    components = _reference_components(reference)
+    ref_classes: dict[str, int] = {}
+    for c in components:
+        cls = str(c["class"]).lower()
+        ref_classes[cls] = ref_classes.get(cls, 0) + 1
+    logger.info("[위치검증][debug] reference class counts: %s", ref_classes)
+    normal_missing, normal_matched, normal_distance = _match_reference_components(
+        components,
+        by_class,
+        transform,
+        tolerance_px,
+        "normal",
+    )
+    rotated_missing, rotated_matched, rotated_distance = _match_reference_components(
+        components,
+        by_class,
+        transform_180,
+        tolerance_px,
+        "rotated_180",
+    )
+    use_rotated = (
+        rotated_matched > normal_matched
+        or (
+            rotated_matched == normal_matched
+            and rotated_matched > 0
+            and rotated_distance < normal_distance
+        )
+    )
+    logger.info(
+        "[위치검증] orientation 선택: %s (normal=%d match, %.1fpx / rotated_180=%d match, %.1fpx)",
+        "rotated_180" if use_rotated else "normal",
+        normal_matched,
+        normal_distance,
+        rotated_matched,
+        rotated_distance,
+    )
+    return rotated_missing if use_rotated else normal_missing
 
 
 def packet_components_for_save(packet: InspectionPacket) -> list[DetectionItem]:
