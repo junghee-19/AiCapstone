@@ -41,6 +41,9 @@ router = APIRouter(prefix="/edge", tags=["Edge Device"])
 
 _preview_lock = threading.Lock()
 _last_preview_jpeg: Optional[bytes] = None
+_guide_state_lock = threading.Lock()
+_guide_worker_lock = threading.Lock()
+_guide_worker_running = False
 _last_guide_detection_at: float = 0.0
 _last_guide_state: dict[str, Any] = {
     "fiducials": [],
@@ -99,6 +102,78 @@ def _refresh_capture_guide_state(frame: np.ndarray) -> dict[str, Any]:
             "gate_reason": "guide-error",
         }
     return _last_guide_state
+
+
+def _get_capture_guide_state() -> dict[str, Any]:
+    with _guide_state_lock:
+        return dict(_last_guide_state)
+
+
+def _set_capture_guide_state(state: dict[str, Any]) -> None:
+    global _last_guide_state
+
+    with _guide_state_lock:
+        _last_guide_state = state
+
+
+def _compute_capture_guide_state(frame: np.ndarray) -> dict[str, Any]:
+    try:
+        import main as main_mod
+        from inference.alignment import compute_alignment
+
+        stage1 = getattr(main_mod, "_stage1_detector")()
+        if stage1 is None:
+            return {
+                "fiducials": [],
+                "alignment": None,
+                "gate_ok": False,
+                "gate_reason": "stage1-not-ready",
+            }
+
+        fiducials, _ = stage1.detect_fiducials(frame)
+        alignment = compute_alignment(fiducials)
+        gate_ok, gate_reason = getattr(main_mod, "_pcb_capture_gate")(frame, alignment)
+        return {
+            "fiducials": fiducials,
+            "alignment": alignment,
+            "gate_ok": gate_ok,
+            "gate_reason": gate_reason,
+        }
+    except Exception as e:
+        logger.debug("[preview guide] failed to refresh guide state: %s", e)
+        return {
+            "fiducials": [],
+            "alignment": None,
+            "gate_ok": False,
+            "gate_reason": "guide-error",
+        }
+
+
+def _capture_guide_worker(frame: np.ndarray) -> None:
+    global _guide_worker_running
+
+    try:
+        _set_capture_guide_state(_compute_capture_guide_state(frame))
+    finally:
+        with _guide_worker_lock:
+            _guide_worker_running = False
+
+
+def _schedule_capture_guide_refresh(frame: np.ndarray) -> None:
+    global _last_guide_detection_at, _guide_worker_running
+
+    now = time.perf_counter()
+    with _guide_worker_lock:
+        if _guide_worker_running:
+            return
+        if now - _last_guide_detection_at < settings.TOUCH_GUIDE_DETECTION_INTERVAL_SEC:
+            return
+        _last_guide_detection_at = now
+        _guide_worker_running = True
+
+    worker_frame = frame.copy()
+    worker = threading.Thread(target=_capture_guide_worker, args=(worker_frame,), daemon=True)
+    worker.start()
 
 
 def _draw_detection_overlay(frame: np.ndarray, fiducials: list[Any], alignment: Any, gate_ok: bool = False, gate_reason: str = "") -> np.ndarray:
@@ -437,7 +512,8 @@ async def stream_camera() -> StreamingResponse:
             try:
                 frame = cam.capture(flush=False)
                 if settings.TOUCH_GUIDE_OVERLAY_ENABLED:
-                    guide_state = _refresh_capture_guide_state(frame)
+                    _schedule_capture_guide_refresh(frame)
+                    guide_state = _get_capture_guide_state()
                     frame = _draw_detection_overlay(
                         frame,
                         guide_state.get("fiducials") or [],
