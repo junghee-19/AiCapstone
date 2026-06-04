@@ -12,6 +12,16 @@ export default function BoardReferencePage() {
   )
 
   const rows = selected ? toCountRows(selected.expectedCounts) : []
+  const components = selected?.components ?? []
+
+  const formatPoint = (bbox: { x: number; y: number; width: number; height: number }) => {
+    const cx = Math.round(bbox.x + bbox.width / 2)
+    const cy = Math.round(bbox.y + bbox.height / 2)
+    return `(${cx}, ${cy})`
+  }
+
+  const formatBbox = (bbox: { x: number; y: number; width: number; height: number }) =>
+    `x ${Math.round(bbox.x)}, y ${Math.round(bbox.y)}, ${Math.round(bbox.width)}x${Math.round(bbox.height)}`
 
   if (!selected) {
     return (
@@ -83,6 +93,56 @@ export default function BoardReferencePage() {
                 <span className="text-sm font-mono text-Black-100%">X{row.count}</span>
               </div>
             ))}
+          </div>
+
+          <div className="mt-5 border-t border-Black-10% pt-4">
+            <div className="flex items-end justify-between gap-3 px-2 pb-3">
+              <div>
+                <h2 className="text-l text-Black-80% font-bold">부품 좌표</h2>
+                <p className="mt-1 text-xs text-Black-40%">기준 이미지 픽셀 좌표와 bbox</p>
+              </div>
+              <span className="text-xs font-mono text-Black-40%">{components.length} items</span>
+            </div>
+
+            <div className="max-h-[360px] overflow-auto rounded-lg border border-Black-10%">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 bg-Background-1 text-Black-40%">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">부품</th>
+                    <th className="px-3 py-2 font-medium">중심 좌표</th>
+                    <th className="px-3 py-2 font-medium">bbox</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-Black-10% bg-white">
+                  {components.map((component) => (
+                    <tr key={component.id}>
+                      <td className="px-3 py-2">
+                        <div
+                          className="font-medium"
+                          style={{ color: DEFECT_COLOR[component.cls] ?? '#1C1C1C' }}
+                        >
+                          {component.id}
+                        </div>
+                        <div className="mt-0.5 text-Black-40%">{component.cls}</div>
+                      </td>
+                      <td className="px-3 py-2 font-mono text-Black-100% whitespace-nowrap">
+                        {formatPoint(component.bbox)}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-Black-60% whitespace-nowrap">
+                        {formatBbox(component.bbox)}
+                      </td>
+                    </tr>
+                  ))}
+                  {!components.length && (
+                    <tr>
+                      <td colSpan={3} className="px-3 py-8 text-center text-Black-40%">
+                        등록된 부품 좌표가 없습니다.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       </div>
