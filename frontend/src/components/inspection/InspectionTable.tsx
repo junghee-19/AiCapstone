@@ -144,8 +144,8 @@ export default function InspectionTable({
   /* 클릭된 검사 ID — DefectViewer 모달에 전달 */
   const [selectedId, setSelectedId] = useState<number | undefined>()
 
-  /* ID 정렬 — 기본 오름차순 (1 → N) */
-  const [idSort, setIdSort] = useState<'asc' | 'desc'>('asc')
+  /* ID 정렬 — 기본 내림차순 (최신 검사 우선) */
+  const [idSort, setIdSort] = useState<'asc' | 'desc'>('desc')
 
   /* 결과 필터 + ID 정렬 적용 */
   const sortedFiltered = useMemo(() => {

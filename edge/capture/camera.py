@@ -27,12 +27,9 @@ CAPTURES_DIR = Path(__file__).resolve().parent.parent / "captures"
 logger = logging.getLogger(__name__)
 
 
-def _try_open_video_index(index: int) -> Optional[cv2.VideoCapture]:
-    """지정 인덱스(및 흔한 백엔드)로 VideoCapture 시도. 성공 시 열린 캡처만 반환."""
-    dev_path = f"/dev/video{index}"
+def _try_open_video_path(dev_path: str) -> Optional[cv2.VideoCapture]:
+    """지정 장치 경로로 VideoCapture 시도. 성공 시 열린 캡처만 반환."""
     factories: list[tuple[str, Callable[[], cv2.VideoCapture]]] = [
-        ("CAP_V4L2+index", lambda i=index: cv2.VideoCapture(i, cv2.CAP_V4L2)),
-        ("default+index", lambda i=index: cv2.VideoCapture(i)),
         ("CAP_V4L2+path", lambda p=dev_path: cv2.VideoCapture(p, cv2.CAP_V4L2)),
         ("default+path", lambda p=dev_path: cv2.VideoCapture(p)),
     ]
@@ -42,6 +39,29 @@ def _try_open_video_index(index: int) -> Optional[cv2.VideoCapture]:
             return cap
         cap.release()
     return None
+
+
+def _try_open_video_index(index: int) -> Optional[cv2.VideoCapture]:
+    """지정 인덱스(및 흔한 백엔드)로 VideoCapture 시도. 성공 시 열린 캡처만 반환."""
+    path_cap = _try_open_video_path(f"/dev/video{index}")
+    if path_cap is not None:
+        return path_cap
+
+    factories: list[tuple[str, Callable[[], cv2.VideoCapture]]] = [
+        ("CAP_V4L2+index", lambda i=index: cv2.VideoCapture(i, cv2.CAP_V4L2)),
+        ("default+index", lambda i=index: cv2.VideoCapture(i)),
+    ]
+    for _label, factory in factories:
+        cap = factory()
+        if cap.isOpened():
+            return cap
+        cap.release()
+    return None
+
+
+def _video_index_from_path(dev_path: str) -> Optional[int]:
+    suffix = Path(dev_path).name.removeprefix("video")
+    return int(suffix) if suffix.isdigit() else None
 
 
 class CameraCapture:
@@ -62,10 +82,13 @@ class CameraCapture:
     def __init__(
         self,
         device_index: int = settings.CAMERA_DEVICE_INDEX,
+        device: Optional[str] = settings.CAMERA_DEVICE,
         width: int = settings.CAMERA_WIDTH,
         height: int = settings.CAMERA_HEIGHT,
     ) -> None:
         self.device_index = device_index
+        self.device = device
+        self.device_path = device or f"/dev/video{device_index}"
         self.width = width
         self.height = height
         self._cap: Optional[cv2.VideoCapture] = None
@@ -91,11 +114,24 @@ class CameraCapture:
                 try_order.append(x)
 
         self._cap = None
+        if self.device:
+            cap = _try_open_video_path(self.device)
+            if cap is not None:
+                self._cap = cap
+                self.device_path = self.device
+                parsed_index = _video_index_from_path(self.device)
+                if parsed_index is not None:
+                    self.device_index = parsed_index
+                logger.info("[camera] opened explicit device %s", self.device_path)
+
         for idx in try_order:
+            if self._cap is not None:
+                break
             cap = _try_open_video_index(idx)
             if cap is not None:
                 self._cap = cap
                 self.device_index = idx
+                self.device_path = f"/dev/video{idx}"
                 if idx != requested:
                     logger.warning(
                         "[카메라] .env 는 %d 였으나 장치 %d (/dev/video%d) 에서 열었습니다.",
@@ -157,7 +193,7 @@ class CameraCapture:
 
         Permission denied 시: `sudo usermod -aG video pi` 후 재로그인.
         """
-        dev = f"/dev/video{self.device_index}"
+        dev = self.device_path
 
         if settings.CAMERA_FOCUS_AUTO:
             logger.info("[카메라] 오토포커스 시도 (CAMERA_FOCUS_AUTO=true)")
@@ -264,7 +300,7 @@ class CameraCapture:
             raise RuntimeError("카메라가 초기화되지 않았습니다.")
 
         clamped = max(0, min(255, int(value)))
-        dev = f"/dev/video{self.device_index}"
+        dev = self.device_path
         with self._focus_lock:
             if auto:
                 self._run_v4l2(dev, "focus_auto", "1")

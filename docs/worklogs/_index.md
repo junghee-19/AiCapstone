@@ -2,6 +2,8 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-04 | Edge camera device path | [2026-06-04_edge-camera-device-path.md](2026-06-04_edge-camera-device-path.md) |
+| 2026-06-04 | History default desc sort | [2026-06-04_history-default-desc-sort.md](2026-06-04_history-default-desc-sort.md) |
 | 2026-06-04 | Trend chart header alignment | [2026-06-04_trend-chart-header-alignment.md](2026-06-04_trend-chart-header-alignment.md) |
 | 2026-06-04 | Detailed stats route fix | [2026-06-04_detailed-stats-route-fix.md](2026-06-04_detailed-stats-route-fix.md) |
 | 2026-06-04 | Trend chart mode controls | [2026-06-04_trend-chart-mode-controls.md](2026-06-04_trend-chart-mode-controls.md) |

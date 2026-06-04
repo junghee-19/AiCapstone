@@ -40,6 +40,7 @@ class Settings(BaseSettings):
 
     # ── 카메라 설정 ──────────────────────────────────────────────────────────
     # /dev/video0 → 0, C922가 video1·video2만 있으면 1 또는 2
+    CAMERA_DEVICE: Optional[str] = Field(default=None)
     CAMERA_DEVICE_INDEX: int = Field(default=0)
     CAMERA_WIDTH: int = Field(default=1920)
     CAMERA_HEIGHT: int = Field(default=1080)
@@ -204,6 +205,15 @@ class Settings(BaseSettings):
     @classmethod
     def _empty_conf_to_none(cls, v: object) -> object:
         if v is None or v == "":
+            return None
+        return v
+
+    @field_validator("CAMERA_DEVICE", mode="before")
+    @classmethod
+    def _empty_camera_device_to_none(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
             return None
         return v
 
