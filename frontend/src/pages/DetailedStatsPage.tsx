@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import {
-  Activity, AlertTriangle, Bold, CalendarDays, CheckCircle2, Clock3, Filter, Gauge,
+  Activity, AlertTriangle, CalendarDays, CheckCircle2, Clock3, Filter, Gauge,
 } from 'lucide-react'
 import { useAllInspections } from '@/hooks/useInspectionData'
 import FailRateTrendChart from '@/components/dashboard/FailRateTrendChart'
