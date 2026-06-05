@@ -132,14 +132,16 @@ function StatCard({
   label,
   value,
   hint,
+  bgClass = 'bg-white',
 }: {
   icon: typeof Activity
   label: string
   value: string
   hint: string
+  bgClass?: string
 }) {
   return (
-    <div className="rounded-xl border border-Black-10% bg-white p-4 shadow-sm">
+    <div className={`rounded-xl border border-Black-10% ${bgClass} p-4 shadow-sm`}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <span className="text-xs font-medium text-Black-40%">{label}</span>
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-Black-4%">
@@ -249,7 +251,7 @@ export default function DetailedStatsPage() {
           <button
             type="button"
             onClick={resetFilters}
-            className="rounded-lg border border-Black-10% bg-white px-3 py-1.5 text-xs font-medium text-Black-40% transition-colors hover:bg-Black-4% hover:text-Black-100%"
+            className="rounded-lg border border-red-800 bg-white px-3 py-1.5 text-xs font-medium text-red-800 transition-colors hover:bg-Black-4% hover:text-Black-100%"
           >
             초기화
           </button>
@@ -300,24 +302,28 @@ export default function DetailedStatsPage() {
           label="전체 검사"
           value={`${stats.totalCount.toLocaleString()}건`}
           hint={`필터 범위 PASS/FAIL ${stats.inspectedCount.toLocaleString()}건`}
+          bgClass="bg-[#E3F5FF]"
         />
         <StatCard
           icon={CheckCircle2}
           label="정상률"
           value={formatRate(stats.normalRate)}
           hint={`정상 ${stats.passCount.toLocaleString()}건`}
+          bgClass="bg-[#F0F9E8]"
         />
         <StatCard
           icon={AlertTriangle}
           label="오류율"
           value={formatRate(stats.errorRate)}
           hint={`오류 ${stats.failCount.toLocaleString()}건`}
+          bgClass="bg-[#FFF4E5]"
         />
         <StatCard
           icon={Gauge}
           label="오류 종류"
           value={`${stats.defectStats.length.toLocaleString()}종`}
           hint={`오류 라벨 ${stats.totalDefects.toLocaleString()}개`}
+          bgClass="bg-[#E5ECF6]"
         />
       </div>
 

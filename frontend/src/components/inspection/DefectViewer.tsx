@@ -759,23 +759,23 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
             </dl>
 
             {missingReasons.length > 0 && (
-              <div className="mt-3 rounded-md border border-red-900/50 bg-red-950/25 px-3 py-2">
-                <h4 className="text-[11px] font-semibold text-red-300 mb-1">FAIL 원인</h4>
+              <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2">
+                <h4 className="text-[11px] font-semibold text-red-800 mb-1">FAIL 원인</h4>
                 <ul className="space-y-1">
                   {missingReasons.map((d, i) => {
                     const pos = missingPositionOf(d.defectType)
                     const cx = Math.round(d.bboxX + d.bboxWidth / 2)
                     const cy = Math.round(d.bboxY + d.bboxHeight / 2)
                     return (
-                      <li key={`${d.defectType}-${i}`} className="text-[11px] text-red-200">
+                      <li key={`${d.defectType}-${i}`} className="text-[11px] font-medium text-red-800">
                         <div>- {defectDisplayName(d.defectType)}</div>
                         {pos && (
-                          <div className="mt-0.5 pl-2 font-mono text-red-100/90">
+                          <div className="mt-0.5 pl-2 font-mono text-red-700">
                             정상 위치: ({Math.round(pos.x)}, {Math.round(pos.y)}) / bbox ({Math.round(d.bboxX)}, {Math.round(d.bboxY)}, {Math.round(d.bboxWidth)}x{Math.round(d.bboxHeight)})
                           </div>
                         )}
                         {!pos && !isCountOnlyMissing(d.defectType) && (
-                          <div className="mt-0.5 pl-2 font-mono text-red-100/90">
+                          <div className="mt-0.5 pl-2 font-mono text-red-700">
                             정상 위치: ({cx}, {cy})
                           </div>
                         )}
