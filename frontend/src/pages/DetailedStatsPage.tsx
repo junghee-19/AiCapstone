@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import {
-  Activity, AlertTriangle, CalendarDays, CheckCircle2, Clock3, Filter, Gauge,
+  Activity, AlertTriangle, Bold, CalendarDays, CheckCircle2, Clock3, Filter, Gauge,
 } from 'lucide-react'
 import { useAllInspections } from '@/hooks/useInspectionData'
 import FailRateTrendChart from '@/components/dashboard/FailRateTrendChart'
@@ -391,7 +391,26 @@ export default function DetailedStatsPage() {
                 <CartesianGrid stroke="rgba(28, 28, 28, 0.1)" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} dy={8} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(value) => [`${value}개`, '오류 라벨']} />
+                <Tooltip
+                  formatter={(value) => [`${value}개`, '오류 라벨']}
+                  contentStyle={{
+                    background: '#FFFFFF',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid rgba(28, 28, 28, 0.1)',
+                    borderRadius: 8,
+                    fontSize: 16,
+                    fontWeight: 700,
+                  }}
+                  itemStyle={{
+                    color: '#ef4444',
+                    fontWeight: 700,
+                  }}
+                  labelStyle={{
+                    color: 'rgba(28, 28, 28, 0.8)',
+                    fontSize: 14,
+                    fontWeight: 400,
+                  }}
+                />
                 <Bar dataKey="count" radius={[8, 8, 0, 0]}>
                   {stats.defectStats.slice(0, 8).map((entry) => (
                     <Cell key={entry.key} fill={entry.color} />

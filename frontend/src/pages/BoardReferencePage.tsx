@@ -96,6 +96,34 @@ export default function BoardReferencePage() {
             ))}
           </div>
 
+          {fiducials.length > 0 && (
+            <div className="mt-5 border-t border-Black-10% pt-4">
+              <div className="flex items-end justify-between gap-3 px-2 pb-3">
+                <div>
+                  <h2 className="text-l text-Black-80% font-bold">기준 마크 좌표</h2>
+                  <p className="mt-1 text-xs text-Black-40%">정렬 기준이며 누락 부품 검사 대상은 아님</p>
+                </div>
+                <span className="text-xs font-mono text-Black-40%">{fiducials.length} marks</span>
+              </div>
+              <div className="space-y-2">
+                {fiducials.map((fiducial) => (
+                  <div
+                    key={fiducial.id}
+                    className="rounded-md border border-sky-200 bg-sky-50/70 px-3 py-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-sky-700">{fiducial.id}</span>
+                      <span className="text-xs font-mono text-sky-900">{formatPoint(fiducial.bbox)}</span>
+                    </div>
+                    <div className="mt-1 text-xs font-mono text-sky-700/80">
+                      bbox {formatBbox(fiducial.bbox)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="mt-5 border-t border-Black-10% pt-4">
             <div className="flex items-end justify-between gap-3 px-2 pb-3">
               <div>
@@ -145,34 +173,6 @@ export default function BoardReferencePage() {
               </table>
             </div>
           </div>
-
-          {fiducials.length > 0 && (
-            <div className="mt-5 border-t border-Black-10% pt-4">
-              <div className="flex items-end justify-between gap-3 px-2 pb-3">
-                <div>
-                  <h2 className="text-l text-Black-80% font-bold">기준 마크 좌표</h2>
-                  <p className="mt-1 text-xs text-Black-40%">정렬 기준이며 누락 부품 검사 대상은 아님</p>
-                </div>
-                <span className="text-xs font-mono text-Black-40%">{fiducials.length} marks</span>
-              </div>
-              <div className="space-y-2">
-                {fiducials.map((fiducial) => (
-                  <div
-                    key={fiducial.id}
-                    className="rounded-md border border-sky-200 bg-sky-50/70 px-3 py-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-sky-700">{fiducial.id}</span>
-                      <span className="text-xs font-mono text-sky-900">{formatPoint(fiducial.bbox)}</span>
-                    </div>
-                    <div className="mt-1 text-xs font-mono text-sky-700/80">
-                      bbox {formatBbox(fiducial.bbox)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </section>
       </div>
     </div>
