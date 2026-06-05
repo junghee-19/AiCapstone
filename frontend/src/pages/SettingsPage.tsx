@@ -51,7 +51,7 @@ function hhmmToCron(hhmm: string): string {
 function LightInfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center justify-between py-2 border-b border-Black-10% last:border-b-0">
-      <span className="text-xs text-Black-40%">{label}</span>
+      <span className="text-xs text-Black-100%">{label}</span>
       <span className="text-xs font-medium text-Black-100%">{value}</span>
     </div>
   )
@@ -146,7 +146,7 @@ function SystemInfoSection() {
 
         {/* 편집 가능 — 보관기간 */}
         <div className="flex items-center justify-between py-2 border-b border-Black-10%">
-          <span className="text-xs text-Black-40%">검사 이력 보관기간</span>
+          <span className="text-xs text-Black-100%">검사 이력 보관기간</span>
           <div className="flex items-center gap-1">
             <input
               type="number"
@@ -156,13 +156,13 @@ function SystemInfoSection() {
               onChange={(e) => setRetentionDays(Number(e.target.value))}
               className="w-12 bg-Black-4% border border-Black-10% text-Black-100% text-xs rounded-md px-2 py-1 text-right focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
-            <span className="text-xs text-Black-40%">일 (자동 삭제)</span>
+            <span className="text-xs text-Black-100%">일 (자동 삭제)</span>
           </div>
         </div>
 
         {/* 편집 가능 — 정리 시각 */}
         <div className="flex items-center justify-between py-2 border-b border-Black-10%">
-          <span className="text-xs text-Black-40%">자동 정리 시각</span>
+          <span className="text-xs text-Black-100%">자동 정리 시각</span>
           <div className="flex items-center gap-1">
             <span className="text-xs text-Black-40%">매일</span>
             <input
