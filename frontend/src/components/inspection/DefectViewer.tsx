@@ -12,6 +12,23 @@ import { defectDisplayName, defectColor } from '@/types/inspection'
 const DEFAULT_REF_WIDTH = 1920
 const DEFAULT_REF_HEIGHT = 1080
 
+// 라벨 배경 바 크기용 — 실제 픽셀 폭을 캔버스로 측정한다.
+// 글자 수 × 상수 추정은 한글(전각)·긴 라벨에서 틀어져 바가 글씨보다 작아진다.
+let _measureCtx: CanvasRenderingContext2D | null = null
+function measureTextWidth(text: string, font: string): number {
+  if (typeof document !== 'undefined') {
+    if (!_measureCtx) _measureCtx = document.createElement('canvas').getContext('2d')
+    if (_measureCtx) {
+      _measureCtx.font = font
+      return _measureCtx.measureText(text).width
+    }
+  }
+  // SSR·캔버스 미지원 폴백: 영문 6.6 / 전각(한글 등) 11px 가정
+  let w = 0
+  for (const ch of text) w += ch.charCodeAt(0) > 0x2e80 ? 11 : 6.6
+  return w
+}
+
 /** F1·F2 중심 좌표가 모두 있을 때 화면 픽셀 기준 거리 */
 function fiducialDistancePx(log: {
   fiducial1X: number | null
@@ -259,7 +276,8 @@ function DefectBox({
   const sw = Math.max(1, w * scaleX)
   const sh = Math.max(1, h * scaleY)
   const cap = `${label} ${(confidence * 100).toFixed(0)}%`
-  const tw = Math.min(220, Math.max(88, cap.length * 7.2))
+  // 실제 글씨 폭 + 좌우 여백(좌 6 / 우 6) — 한글·긴 라벨도 바가 글씨를 다 덮음
+  const tw = Math.ceil(measureTextWidth(cap, '700 11px ui-monospace, monospace')) + 12
   const ty = sy > 22 ? sy - 21 : sy + 3
 
   return (
@@ -306,7 +324,8 @@ function MissingBox({
   const cx = sx + sw / 2
   const cy = sy + sh / 2
   const cap = `정상 위치: ${label}`
-  const tw = Math.min(240, Math.max(112, cap.length * 7.4))
+  // 실제 글씨 폭 + 좌우 여백(좌 7 / 우 7)
+  const tw = Math.ceil(measureTextWidth(cap, '800 11px ui-monospace, monospace')) + 14
   const ty = sy > 26 ? sy - 24 : sy + sh + 5
 
   return (
