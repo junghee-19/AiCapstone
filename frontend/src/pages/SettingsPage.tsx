@@ -314,7 +314,7 @@ function DeviceManagementSection() {
                           captureM.mutate({ deviceId: device.deviceId, count: 1, interval: 1 })
                         }
                         disabled={!device.connected || captureM.isPending}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-45"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         <Camera size={13} />
                         1장 촬영
@@ -324,7 +324,7 @@ function DeviceManagementSection() {
                           captureM.mutate({ deviceId: device.deviceId, count: 10, interval: 3 })
                         }
                         disabled={!device.connected || captureM.isPending}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-100 transition-colors hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-45"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         <Camera size={13} />
                         10장 촬영

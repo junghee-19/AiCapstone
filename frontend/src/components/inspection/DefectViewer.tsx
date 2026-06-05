@@ -702,7 +702,7 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
               <a
                 href={deskewSrc}
                 download={imageDownloadName(log)}
-                className="mb-3 flex w-full items-center justify-center gap-2 rounded-md border border-indigo-500/50 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-100 transition-colors hover:bg-indigo-500/20 hover:border-indigo-400"
+                className="mb-3 flex w-full items-center justify-center gap-2 rounded-md border border-indigo-500/50 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-500/20 hover:border-indigo-400"
               >
                 <Download size={14} />
                 원본 이미지 다운로드
