@@ -302,7 +302,7 @@ export default function InspectionTable({
           onClick={() => setSelectedId(undefined)}
         >
           <div
-            className="max-h-[calc(100vh-2rem)] w-full max-w-6xl overflow-y-auto rounded-xl shadow-2xl"
+            className="max-h-[calc(100vh-2rem)] w-full max-w-[98vw] overflow-y-auto rounded-xl shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <DefectViewer

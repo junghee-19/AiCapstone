@@ -2,6 +2,10 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-07 | Inspection detail pan layout | [2026-06-07_inspection-detail-pan-layout.md](2026-06-07_inspection-detail-pan-layout.md) |
+| 2026-06-07 | Inspection detail image zoom | [2026-06-07_inspection-detail-image-zoom.md](2026-06-07_inspection-detail-image-zoom.md) |
+| 2026-06-07 | Inspection detail missing dedupe | [2026-06-07_inspection-detail-missing-dedupe.md](2026-06-07_inspection-detail-missing-dedupe.md) |
+| 2026-06-07 | Inspection detail overlay controls | [2026-06-07_inspection-detail-overlay-controls.md](2026-06-07_inspection-detail-overlay-controls.md) |
 | 2026-06-07 | Pi touchscreen missing dedupe | [2026-06-07_pi-touchscreen-missing-dedupe.md](2026-06-07_pi-touchscreen-missing-dedupe.md) |
 | 2026-06-07 | Reference cardinality matching | [2026-06-07_reference-cardinality-matching.md](2026-06-07_reference-cardinality-matching.md) |
 | 2026-06-07 | Reference nearest coordinate | [2026-06-07_reference-nearest-coordinate.md](2026-06-07_reference-nearest-coordinate.md) |

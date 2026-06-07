@@ -2,10 +2,10 @@
  * 검사 상세 뷰어 — 보정 전/후 이미지에 피듀셜(F1·F2)과 결함 박스를 오버레이한다.
  */
 
-import { useRef, useState, useEffect, useMemo, type ReactNode } from 'react'
-import { X, ImageOff, AlertCircle, Download } from 'lucide-react'
+import { useRef, useState, useEffect, useMemo, type PointerEvent, type ReactNode } from 'react'
+import { X, ImageOff, AlertCircle, Download, Eye, EyeOff, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { useInspectionById } from '@/hooks/useInspectionData'
-import type { InspectionLog } from '@/types/inspection'
+import type { DefectDetail, InspectionLog } from '@/types/inspection'
 import { defectDisplayName, defectColor } from '@/types/inspection'
 
 // ── 이미지 로드 전 기본값 (로드 후 naturalWidth/Height 사용) ───────────────
@@ -49,6 +49,70 @@ function isCountOnlyMissing(defectType: string): boolean {
 
 function missingClassOf(defectType: string): string {
   return defectType.startsWith('MISSING:') ? defectType.split(':')[1] ?? defectType : defectType
+}
+
+function dedupeMissingReasons(defects: DefectDetail[]): DefectDetail[] {
+  const positionedClasses = new Set(
+    defects
+      .filter((d) => missingPositionOf(d.defectType))
+      .map((d) => missingClassOf(d.defectType))
+      .filter(Boolean),
+  )
+  const seen = new Set<string>()
+  return defects.filter((d) => {
+    const cls = missingClassOf(d.defectType)
+    if (isCountOnlyMissing(d.defectType) && positionedClasses.has(cls)) return false
+    const key = `${cls}:${missingPositionOf(d.defectType) ? 'position' : 'count'}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const NORMAL_COMPONENT_TYPES = new Set([
+  'mount_hole',
+  'gold_finger_row',
+  'fiducial',
+  'smd_array_block',
+  'ic_chip',
+  'edge_connector_zone',
+])
+
+function normalizedDefectType(defectType: string): string {
+  return String(defectType || '').trim().toLowerCase()
+}
+
+function isNormalComponent(d: DefectDetail): boolean {
+  const type = String(d.defectType || '')
+  if (type.startsWith('MISSING:') || type.startsWith('ANOMALY:')) return false
+  return NORMAL_COMPONENT_TYPES.has(normalizedDefectType(type))
+}
+
+function zoomedCrop(crop: CropRect, imageSize: { w: number; h: number }, zoom: number): CropRect {
+  const imageW = Math.max(1, imageSize.w)
+  const imageH = Math.max(1, imageSize.h)
+  const safeZoom = clamp(zoom, 1, 4)
+  const width = Math.max(1, Math.min(imageW, crop.width / safeZoom))
+  const height = Math.max(1, Math.min(imageH, crop.height / safeZoom))
+  const cx = crop.x + crop.width / 2
+  const cy = crop.y + crop.height / 2
+  return {
+    x: clamp(cx - width / 2, 0, imageW - width),
+    y: clamp(cy - height / 2, 0, imageH - height),
+    width,
+    height,
+  }
+}
+
+function panCrop(crop: CropRect, imageSize: { w: number; h: number }, pan: { x: number; y: number }): CropRect {
+  const imageW = Math.max(1, imageSize.w)
+  const imageH = Math.max(1, imageSize.h)
+  return {
+    x: clamp(crop.x + pan.x, 0, Math.max(0, imageW - crop.width)),
+    y: clamp(crop.y + pan.y, 0, Math.max(0, imageH - crop.height)),
+    width: crop.width,
+    height: crop.height,
+  }
 }
 
 function buildPcbCrop(log: InspectionLog, imageSize: { w: number; h: number }): CropRect {
@@ -385,6 +449,59 @@ function PanelBadge({ children }: { children: ReactNode }) {
   )
 }
 
+function OverlayToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  const Icon = checked ? Eye : EyeOff
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={[
+        'flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-xs font-semibold transition-colors',
+        checked
+          ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-100'
+          : 'border-Black-10% bg-white text-Black-40% hover:text-Black-80%',
+      ].join(' ')}
+      aria-pressed={checked}
+    >
+      <span>{label}</span>
+      <Icon size={14} />
+    </button>
+  )
+}
+
+function ZoomButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string
+  disabled?: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="grid h-8 w-8 place-items-center rounded-md border border-white/20 bg-Black-100%/80 text-white shadow-sm transition-colors hover:bg-Black-80% disabled:cursor-not-allowed disabled:opacity-40"
+      aria-label={label}
+      title={label}
+    >
+      {children}
+    </button>
+  )
+}
+
 export default function DefectViewer({ inspectionId, onClose }: DefectViewerProps) {
   const { data: log, isLoading } = useInspectionById(inspectionId)
   const deskewSrc = resolveImageSrc(log)
@@ -393,9 +510,18 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
   const showSideBySide = false
   const f12DistancePx = log != null ? fiducialDistancePx(log) : null
   const defects = log?.defects ?? []
-  const overlayDefects = defects.filter((d) => !d.defectType.startsWith('MISSING:'))
+  const detectedComponents = defects.filter((d) => !d.defectType.startsWith('MISSING:'))
+  const normalComponents = detectedComponents.filter(isNormalComponent)
+  const defectDetections = detectedComponents.filter((d) => !isNormalComponent(d))
   const missingReasons = defects.filter((d) => d.defectType.startsWith('MISSING:'))
+  const displayMissingReasons = dedupeMissingReasons(missingReasons)
   const overlayMissing = missingReasons.filter((d) => !isCountOnlyMissing(d.defectType))
+  const [showNormalLabels, setShowNormalLabels] = useState(true)
+  const [showDefectLabels, setShowDefectLabels] = useState(true)
+  const [showMissingLabels, setShowMissingLabels] = useState(true)
+  const visibleNormalComponents = showNormalLabels ? normalComponents : []
+  const visibleDefectDetections = showDefectLabels ? defectDetections : []
+  const visibleMissing = showMissingLabels ? overlayMissing : []
 
   /* 오버레이는 보정 후 이미지 기준 */
   const imgRef = useRef<HTMLImageElement>(null)
@@ -403,11 +529,22 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
   const [refPixels, setRefPixels] = useState({ w: DEFAULT_REF_WIDTH, h: DEFAULT_REF_HEIGHT })
   const [deskewLoadError, setDeskewLoadError] = useState(false)
   const [rawLoadError, setRawLoadError] = useState(false)
+  const [imageZoom, setImageZoom] = useState(1)
+  const [imagePan, setImagePan] = useState({ x: 0, y: 0 })
+  const [isPanning, setIsPanning] = useState(false)
+  const panStartRef = useRef({
+    pointerX: 0,
+    pointerY: 0,
+    panX: 0,
+    panY: 0,
+  })
 
   useEffect(() => {
     setDeskewLoadError(false)
     setRawLoadError(false)
     setRefPixels({ w: DEFAULT_REF_WIDTH, h: DEFAULT_REF_HEIGHT })
+    setImageZoom(1)
+    setImagePan({ x: 0, y: 0 })
   }, [inspectionId, deskewSrc, rawSrc])
 
   /* 이미지가 로드되거나 창 크기가 변경되면 실제 크기 재측정 (보정 후 패널만) */
@@ -432,12 +569,53 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
     () => (log ? buildPcbCrop(log, refPixels) : { x: 0, y: 0, width: refPixels.w, height: refPixels.h }),
     [log, refPixels]
   )
+  const imageViewBox = useMemo(
+    () => panCrop(zoomedCrop(pcbCrop, refPixels, imageZoom), refPixels, imagePan),
+    [pcbCrop, refPixels, imageZoom, imagePan]
+  )
+
+  const beginPan = (event: PointerEvent<SVGSVGElement>) => {
+    if (event.button !== 0) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    panStartRef.current = {
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      panX: imagePan.x,
+      panY: imagePan.y,
+    }
+    setIsPanning(true)
+  }
+
+  const movePan = (event: PointerEvent<SVGSVGElement>) => {
+    if (!isPanning) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const unitX = imageViewBox.width / Math.max(1, rect.width)
+    const unitY = imageViewBox.height / Math.max(1, rect.height)
+    const dx = event.clientX - panStartRef.current.pointerX
+    const dy = event.clientY - panStartRef.current.pointerY
+    setImagePan({
+      x: panStartRef.current.panX - dx * unitX,
+      y: panStartRef.current.panY - dy * unitY,
+    })
+  }
+
+  const endPan = (event: PointerEvent<SVGSVGElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    setIsPanning(false)
+  }
+
+  const resetImageView = () => {
+    setImageZoom(1)
+    setImagePan({ x: 0, y: 0 })
+  }
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden">
+    <div className="flex max-h-[calc(100vh-2rem)] flex-col bg-white rounded-xl overflow-hidden">
 
       {/* 헤더 바 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-Black-10%">
+      <div className="flex shrink-0 items-center justify-between px-4 py-3 border-b border-Black-10%">
         <div className="flex items-center gap-2">
           <AlertCircle size={15} className="text-indigo-400" />
           <span className="text-sm font-semibold text-Black-100%">
@@ -459,7 +637,7 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
       </div>
 
       {log && isFiducialAlignmentSentinel(log) && (
-        <div className="px-4 py-2.5 bg-amber-950/50 border-b border-amber-900/40 text-[11px] text-amber-100/95 leading-relaxed">
+        <div className="shrink-0 px-4 py-2.5 bg-amber-950/50 border-b border-amber-900/40 text-[11px] text-amber-100/95 leading-relaxed">
           <strong className="text-amber-200">정렬(피듀셜) 단계에서 실패했습니다.</strong> 마크가 2개
           이상 잡히지 않아 기울기 값이 999°로 기록됩니다. 이 상태에서는{' '}
           <strong>결함 검사가 실행되지 않습니다</strong> — 표시할 결함 박스가 없는 것이 정상입니다.
@@ -480,14 +658,14 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
           데이터를 불러올 수 없습니다.
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-0">
+        <div className="flex flex-1 min-h-0 flex-col lg:flex-row lg:items-stretch gap-0 overflow-hidden">
 
           {/* 좌: 보정 전 / 우: 보정 후(+오버레이) — 또는 단일 이미지 */}
           <div
             className={
               showSideBySide
                 ? 'flex flex-col sm:flex-row flex-1 min-w-0 border-b lg:border-b-0 lg:border-r border-Black-10%'
-                : 'relative flex-1 bg-Background-1 min-h-48 border-b lg:border-b-0 lg:border-r border-Black-10%'
+                : 'relative flex-1 min-w-0 lg:min-h-0 overflow-hidden bg-Background-1 min-h-48 border-b lg:border-b-0 lg:border-r border-Black-10%'
             }
           >
             {showSideBySide ? (
@@ -551,9 +729,9 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                             scaleY={scaleY}
                           />
                         )}
-                        {overlayDefects.map((d, i) => (
+                        {visibleNormalComponents.map((d, i) => (
                           <DefectBox
-                            key={`${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
+                            key={`normal-${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
                             x={d.bboxX}
                             y={d.bboxY}
                             w={d.bboxWidth}
@@ -565,7 +743,21 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                             scaleY={scaleY}
                           />
                         ))}
-                        {overlayMissing.map((d, i) => (
+                        {visibleDefectDetections.map((d, i) => (
+                          <DefectBox
+                            key={`defect-${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
+                            x={d.bboxX}
+                            y={d.bboxY}
+                            w={d.bboxWidth}
+                            h={d.bboxHeight}
+                            label={defectDisplayName(d.defectType)}
+                            confidence={d.confidence}
+                            color={defectColor(d.defectType)}
+                            scaleX={scaleX}
+                            scaleY={scaleY}
+                          />
+                        ))}
+                        {visibleMissing.map((d, i) => (
                           <MissingBox
                             key={`missing-${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
                             x={d.bboxX}
@@ -589,7 +781,33 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                 </div>
               </>
             ) : deskewSrc && !deskewLoadError ? (
-              <div className="relative w-full overflow-hidden bg-Black-100%">
+              <div className="relative flex w-full items-center justify-center overflow-hidden bg-Black-100% lg:h-full">
+                <div className="absolute right-3 bottom-3 z-20 flex items-center gap-1.5 rounded-lg border border-white/15 bg-Black-100%/45 p-1.5 backdrop-blur">
+                  <ZoomButton
+                    label="축소"
+                    disabled={imageZoom <= 1}
+                    onClick={() => setImageZoom((z) => Math.max(1, Number((z - 0.25).toFixed(2))))}
+                  >
+                    <ZoomOut size={15} />
+                  </ZoomButton>
+                  <span className="min-w-11 text-center text-[11px] font-bold tabular-nums text-white">
+                    {Math.round(imageZoom * 100)}%
+                  </span>
+                  <ZoomButton
+                    label="확대"
+                    disabled={imageZoom >= 4}
+                    onClick={() => setImageZoom((z) => Math.min(4, Number((z + 0.25).toFixed(2))))}
+                  >
+                    <ZoomIn size={15} />
+                  </ZoomButton>
+                  <ZoomButton
+                    label="초기화"
+                    disabled={imageZoom === 1 && imagePan.x === 0 && imagePan.y === 0}
+                    onClick={resetImageView}
+                  >
+                    <RotateCcw size={14} />
+                  </ZoomButton>
+                </div>
                 <img
                   ref={imgRef}
                   src={deskewSrc}
@@ -609,9 +827,17 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                   onError={() => setDeskewLoadError(true)}
                 />
                 <svg
-                  className="block w-full h-auto pointer-events-none"
-                  viewBox={`${pcbCrop.x} ${pcbCrop.y} ${pcbCrop.width} ${pcbCrop.height}`}
+                  className={[
+                    'block w-full h-auto max-h-[calc(100vh-9rem)] select-none lg:h-full lg:max-h-full',
+                    isPanning ? 'cursor-grabbing' : 'cursor-grab',
+                  ].join(' ')}
+                  viewBox={`${imageViewBox.x} ${imageViewBox.y} ${imageViewBox.width} ${imageViewBox.height}`}
                   preserveAspectRatio="xMidYMid meet"
+                  onPointerDown={beginPan}
+                  onPointerMove={movePan}
+                  onPointerUp={endPan}
+                  onPointerCancel={endPan}
+                  style={{ touchAction: 'none' }}
                 >
                   <image
                     href={deskewSrc}
@@ -641,9 +867,9 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                       scaleY={1}
                     />
                   )}
-                  {overlayDefects.map((d, i) => (
+                  {visibleNormalComponents.map((d, i) => (
                     <DefectBox
-                      key={`${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
+                      key={`normal-${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
                       x={d.bboxX}
                       y={d.bboxY}
                       w={d.bboxWidth}
@@ -655,7 +881,21 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                       scaleY={1}
                     />
                   ))}
-                  {overlayMissing.map((d, i) => (
+                  {visibleDefectDetections.map((d, i) => (
+                    <DefectBox
+                      key={`defect-${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
+                      x={d.bboxX}
+                      y={d.bboxY}
+                      w={d.bboxWidth}
+                      h={d.bboxHeight}
+                      label={defectDisplayName(d.defectType)}
+                      confidence={d.confidence}
+                      color={defectColor(d.defectType)}
+                      scaleX={1}
+                      scaleY={1}
+                    />
+                  ))}
+                  {visibleMissing.map((d, i) => (
                     <MissingBox
                       key={`missing-${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
                       x={d.bboxX}
@@ -693,7 +933,7 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
           </div>
 
           {/* 우측: 검사 메타데이터 패널 */}
-          <div className="w-full lg:w-64 border-t lg:border-t-0 lg:border-l border-Black-10% p-4 shrink-0">
+          <div className="w-full lg:w-52 xl:w-56 border-t lg:border-t-0 lg:border-l border-Black-10% p-4 shrink-0 lg:min-h-0 lg:overflow-y-auto">
             <h3 className="text-xs font-semibold text-Black-40% uppercase tracking-wider mb-3">
               검사 정보
             </h3>
@@ -755,14 +995,46 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
               )}
               <MetaRow label="추론 시간"   value={log.inferenceTimeMs != null ? `${log.inferenceTimeMs}ms` : '—'} />
               <MetaRow label="총 처리"     value={log.totalTimeMs != null ? `${log.totalTimeMs}ms` : '—'} />
-              <MetaRow label="검출 수"     value={`${overlayDefects.length}건`} />
+              <MetaRow label="정상 부품"   value={`${normalComponents.length}건`} />
+              <MetaRow label="결함"        value={`${defectDetections.length}건`} />
+              <MetaRow label="누락"        value={`${displayMissingReasons.length}건`} />
             </dl>
+          </div>
 
-            {missingReasons.length > 0 && (
-              <div className="mt-3 rounded-md border border-red-900/50 bg-red-950/25 px-3 py-2">
+          {/* 우측: 검출 데이터 패널 */}
+          <div className="w-full lg:w-60 xl:w-64 border-t lg:border-t-0 lg:border-l border-Black-10% p-4 shrink-0 lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h3 className="text-xs font-semibold text-Black-40% uppercase tracking-wider">
+                검출 데이터
+              </h3>
+              <span className="text-[11px] font-mono text-Black-40%">
+                {detectedComponents.length + displayMissingReasons.length}건
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <OverlayToggle
+                label={`정상 ${normalComponents.length}`}
+                checked={showNormalLabels}
+                onChange={setShowNormalLabels}
+              />
+              <OverlayToggle
+                label={`결함 ${defectDetections.length}`}
+                checked={showDefectLabels}
+                onChange={setShowDefectLabels}
+              />
+              <OverlayToggle
+                label={`누락 ${displayMissingReasons.length}`}
+                checked={showMissingLabels}
+                onChange={setShowMissingLabels}
+              />
+            </div>
+
+            {displayMissingReasons.length > 0 && (
+              <div className="mb-4 rounded-md border border-red-900/50 bg-red-950/25 px-3 py-2">
                 <h4 className="text-[11px] font-semibold text-red-300 mb-1">FAIL 원인</h4>
                 <ul className="space-y-1">
-                  {missingReasons.map((d, i) => {
+                  {displayMissingReasons.map((d, i) => {
                     const pos = missingPositionOf(d.defectType)
                     const cx = Math.round(d.bboxX + d.bboxWidth / 2)
                     const cy = Math.round(d.bboxY + d.bboxHeight / 2)
@@ -786,16 +1058,17 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
               </div>
             )}
 
-            {overlayDefects.length > 0 && (
-              <div className="mt-4 border-t border-Black-10% pt-3">
-                <h4 className="text-[11px] font-semibold text-Black-40% uppercase tracking-wider mb-2">
+            {detectedComponents.length > 0 ? (
+              <div className="border-t border-Black-10% pt-3 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+                <h4 className="text-[11px] font-semibold text-Black-40% uppercase tracking-wider mb-2 shrink-0">
                   검출 좌표
                 </h4>
-                <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-                  {overlayDefects.map((d, i) => {
+                <div className="max-h-[60vh] lg:max-h-none lg:flex-1 overflow-y-auto space-y-2 pr-1">
+                  {detectedComponents.map((d, i) => {
                     const cx = d.bboxX + Math.round(d.bboxWidth / 2)
                     const cy = d.bboxY + Math.round(d.bboxHeight / 2)
                     const color = defectColor(d.defectType)
+                    const category = isNormalComponent(d) ? '정상' : '결함'
                     // fiducial 좌표 있으면 부품 중심 → 마크까지 거리 계산
                     const distF1 =
                       log?.fiducial1X != null && log?.fiducial1Y != null
@@ -814,8 +1087,8 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                           <span className="text-[11px] font-semibold truncate" style={{ color }}>
                             {i + 1}. {defectDisplayName(d.defectType)}
                           </span>
-                          <span className="text-[11px] font-mono text-Black-40%">
-                            {(d.confidence * 100).toFixed(1)}%
+                          <span className="shrink-0 text-[10px] font-semibold text-Black-40%">
+                            {category} · {(d.confidence * 100).toFixed(1)}%
                           </span>
                         </div>
                         <div className="text-[11px] font-mono text-Black-80% leading-relaxed">
@@ -834,6 +1107,10 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                     )
                   })}
                 </div>
+              </div>
+            ) : (
+              <div className="rounded-md border border-Black-10% bg-Background-1 px-3 py-4 text-xs text-Black-40% text-center">
+                표시할 검출 데이터가 없습니다.
               </div>
             )}
 
