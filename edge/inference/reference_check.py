@@ -191,6 +191,82 @@ def _reference_components(reference: dict) -> list[dict]:
     ]
 
 
+def _is_orientation_class(class_name: str) -> bool:
+    name = class_name.lower()
+    return any(
+        key in name
+        for key in (
+            "model_name",
+            "g_series",
+            "name_zone",
+            "edge_connector",
+            "connector_zone",
+            "board_id",
+        )
+    )
+
+
+def _choose_rotated_orientation(
+    *,
+    components: list[dict],
+    by_class: dict[str, list[DetectionItem]],
+    transform,
+    transform_180,
+    tolerance_px: float,
+    normal_matched: int,
+    normal_distance: float,
+    rotated_matched: int,
+    rotated_distance: float,
+) -> bool:
+    orientation_components = [
+        c for c in components
+        if _is_orientation_class(str(c.get("class", "")))
+    ]
+    detected_orientation_components = [
+        c for c in orientation_components
+        if by_class.get(str(c.get("class", "")).lower())
+    ]
+
+    if detected_orientation_components:
+        _, normal_dir_matched, normal_dir_distance = _match_reference_components(
+            detected_orientation_components,
+            by_class,
+            transform,
+            tolerance_px,
+            "normal_direction",
+        )
+        _, rotated_dir_matched, rotated_dir_distance = _match_reference_components(
+            detected_orientation_components,
+            by_class,
+            transform_180,
+            tolerance_px,
+            "rotated_180_direction",
+        )
+        logger.info(
+            "[위치검증] orientation 방향성 클래스 점수: normal=%d match, %.1fpx / rotated_180=%d match, %.1fpx",
+            normal_dir_matched,
+            normal_dir_distance,
+            rotated_dir_matched,
+            rotated_dir_distance,
+        )
+        if rotated_dir_matched != normal_dir_matched:
+            return rotated_dir_matched > normal_dir_matched
+        if rotated_dir_matched > 0 and rotated_dir_distance != normal_dir_distance:
+            return rotated_dir_distance < normal_dir_distance
+
+    # 대칭 클래스(IC, hole, SMD array 등)만으로 180도 선택이 뒤집히지 않도록 보수적으로 판단한다.
+    if rotated_matched >= normal_matched + 2:
+        return True
+    if (
+        rotated_matched == normal_matched
+        and rotated_matched > 0
+        and normal_distance > 0
+        and rotated_distance < normal_distance * 0.75
+    ):
+        return True
+    return False
+
+
 def _match_reference_components(
     components: list[dict],
     by_class: dict[str, list[DetectionItem]],
@@ -341,13 +417,16 @@ def check_missing_components(
         tolerance_px,
         "rotated_180",
     )
-    use_rotated = (
-        rotated_matched > normal_matched
-        or (
-            rotated_matched == normal_matched
-            and rotated_matched > 0
-            and rotated_distance < normal_distance
-        )
+    use_rotated = _choose_rotated_orientation(
+        components=components,
+        by_class=by_class,
+        transform=transform,
+        transform_180=transform_180,
+        tolerance_px=tolerance_px,
+        normal_matched=normal_matched,
+        normal_distance=normal_distance,
+        rotated_matched=rotated_matched,
+        rotated_distance=rotated_distance,
     )
     logger.info(
         "[위치검증] orientation 선택: %s (normal=%d match, %.1fpx / rotated_180=%d match, %.1fpx)",
