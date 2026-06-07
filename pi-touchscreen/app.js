@@ -95,7 +95,9 @@
   }
   const missingPositionOf = (t) => {
     if (!t || !t.startsWith('MISSING:')) return null
-    const m = t.match(/^MISSING:[^:]+:expected_at=\(([\d.-]+),([\d.-]+)\),nearest=([\d.]+|inf)px$/)
+    const m = t.match(
+      /^MISSING:[^:]+:expected_at=\(([\d.-]+),([\d.-]+)\)(?:,nearest_at=\((?:[\d.-]+),(?:[\d.-]+)\))?,nearest=([\d.]+|inf)px(?:,iou=(?:[\d.]+))?$/,
+    )
     if (!m) return null
     return {
       x: Number(m[1]),
@@ -103,6 +105,7 @@
       nearest: m[3] === 'inf' ? '없음' : `${m[3]}px`,
     }
   }
+  const missingClassOf = (d) => String(d?.defectType || '').split(':')[1] || ''
   const isCountOnlyMissing = (d) =>
     d?.defectType?.startsWith('MISSING:') && !missingPositionOf(d.defectType)
   const isProblemDefect = (d) => {
@@ -438,8 +441,16 @@
   function drawDefectBoxes(defects, view) {
     const { ratio, offsetX, offsetY } = view
     const problemDefects = defects.filter(isProblemDefect)
+    const positionedMissingClasses = new Set(
+      problemDefects
+        .filter((d) => d?.defectType?.startsWith('MISSING:') && missingPositionOf(d.defectType))
+        .map(missingClassOf)
+        .filter(Boolean),
+    )
     const drawableDefects = problemDefects.filter((d) => !isCountOnlyMissing(d))
-    const summaryDefects = problemDefects.filter((d) => isCountOnlyMissing(d))
+    const summaryDefects = problemDefects.filter(
+      (d) => isCountOnlyMissing(d) && !positionedMissingClasses.has(missingClassOf(d)),
+    )
     const stroke = Math.max(2, canvas.width / 360)
     const fontSize = Math.max(10, Math.round(canvas.width / 86))
     ctx.lineWidth = stroke
@@ -515,7 +526,16 @@
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
 
-    defects.slice(0, 4).forEach((d) => {
+    const uniqueDefects = []
+    const seen = new Set()
+    defects.forEach((d) => {
+      const key = `${missingClassOf(d) || d.defectType}:${labelOf(d.defectType)}`
+      if (seen.has(key)) return
+      seen.add(key)
+      uniqueDefects.push(d)
+    })
+
+    uniqueDefects.slice(0, 4).forEach((d) => {
       const color = colorOf(d.defectType)
       const text = labelOf(d.defectType)
       const w = Math.min(canvas.width - 20, ctx.measureText(text).width + padX * 2)

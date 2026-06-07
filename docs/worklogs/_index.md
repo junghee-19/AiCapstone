@@ -2,6 +2,7 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-07 | Pi touchscreen missing dedupe | [2026-06-07_pi-touchscreen-missing-dedupe.md](2026-06-07_pi-touchscreen-missing-dedupe.md) |
 | 2026-06-07 | Reference cardinality matching | [2026-06-07_reference-cardinality-matching.md](2026-06-07_reference-cardinality-matching.md) |
 | 2026-06-07 | Reference nearest coordinate | [2026-06-07_reference-nearest-coordinate.md](2026-06-07_reference-nearest-coordinate.md) |
 | 2026-06-07 | Reference match condition | [2026-06-07_reference-match-condition.md](2026-06-07_reference-match-condition.md) |
