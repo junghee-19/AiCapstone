@@ -13,6 +13,7 @@
 | 2026-06-07 | Reference one to one matching | [2026-06-07_reference-one-to-one-matching.md](2026-06-07_reference-one-to-one-matching.md) |
 | 2026-06-07 | Reference orientation selection | [2026-06-07_reference-orientation-selection.md](2026-06-07_reference-orientation-selection.md) |
 | 2026-06-07 | Restore align reference fiducials | [2026-06-07_restore-align-reference-fiducials.md](2026-06-07_restore-align-reference-fiducials.md) |
+| 2026-06-05 | Frontend button text contrast | [2026-06-05_frontend-button-text-contrast.md](2026-06-05_frontend-button-text-contrast.md) |
 | 2026-06-05 | Reference check 180 orientation | [2026-06-05_reference-check-180-orientation.md](2026-06-05_reference-check-180-orientation.md) |
 | 2026-06-05 | Exclude fiducials from missing check | [2026-06-05_exclude-fiducials-from-missing-check.md](2026-06-05_exclude-fiducials-from-missing-check.md) |
 | 2026-06-05 | Edge reference profile deploy | [2026-06-05_edge-reference-profile-deploy.md](2026-06-05_edge-reference-profile-deploy.md) |

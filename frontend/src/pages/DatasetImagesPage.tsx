@@ -163,7 +163,7 @@ export default function DatasetImagesPage() {
           <button
             onClick={downloadSelected}
             disabled={selectedImages.length === 0 || downloadArchiveM.isPending}
-            className="inline-flex items-center gap-2 rounded-md border border-indigo-500/60 bg-indigo-500/15 px-3 py-2 text-xs font-semibold text-indigo-100 transition-colors hover:bg-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-45"
+            className="inline-flex items-center gap-2 rounded-md border border-indigo-500/60 bg-indigo-500/15 px-3 py-2 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-45"
           >
             <Download size={14} />
             선택 다운로드 {selectedImages.length > 0 ? `(${selectedImages.length})` : ''}

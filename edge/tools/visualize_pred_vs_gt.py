@@ -59,6 +59,56 @@ def norm_box_to_pixels(
     return x1, y1, x2, y2
 
 
+def _text_color_for(bg_bgr: tuple[int, int, int]) -> tuple[int, int, int]:
+    """배경 밝기에 따라 검정/흰 글씨를 골라 가독성을 보장한다."""
+    b, g, r = bg_bgr
+    lum = 0.114 * b + 0.587 * g + 0.299 * r
+    return (0, 0, 0) if lum > 140 else (255, 255, 255)
+
+
+def draw_label(
+    img: np.ndarray,
+    text: str,
+    x1: int,
+    y1: int,
+    color: tuple[int, int, int],
+    *,
+    font_scale: float = 0.45,
+    thickness: int = 1,
+) -> None:
+    """박스 좌상단에 색 배경바를 깔고 그 위에 글씨를 얹는다.
+
+    배경바 폭을 글자 '전체 폭'에 맞춰 글씨가 박스 밖으로 삐져나오지 않게 한다.
+    박스가 오른쪽 끝에 붙어 바가 이미지를 넘으면, 글씨가 잘리지 않도록
+    바 전체를 왼쪽으로 민다.
+    """
+    ih, iw = img.shape[:2]
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    (tw, th), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+    pad = 3
+    bar_w = tw + pad * 2
+    bar_h = th + baseline + pad * 2
+
+    # 가로: 글자 전체가 들어가도록 폭을 확보하고, 넘치면 왼쪽으로 민다
+    left = max(0, min(x1, iw - bar_w))
+    right = left + bar_w
+    # 세로: 박스 위에 붙이되 이미지 위로 벗어나면 박스 안쪽으로 내린다
+    top = max(0, y1 - bar_h)
+    bottom = top + bar_h
+
+    cv2.rectangle(img, (left, top), (right, bottom), color, -1)
+    cv2.putText(
+        img,
+        text,
+        (left + pad, top + pad + th),
+        font,
+        font_scale,
+        _text_color_for(color),
+        thickness,
+        cv2.LINE_AA,
+    )
+
+
 def parse_yolo_labels(path: Path) -> list[tuple[int, float, float, float, float]]:
     if not path.is_file():
         return []
@@ -82,16 +132,7 @@ def draw_gt(img: np.ndarray, labels: list[tuple[int, float, float, float, float]
         x1, y1, x2, y2 = norm_box_to_pixels(xc, yc, w, h, iw, ih)
         cv2.rectangle(img, (x1, y1), (x2, y2), _GT_COLOR, 2)
         tag = f"GT {names.get(cid, cid)}"
-        cv2.putText(
-            img,
-            tag,
-            (x1, max(12, y1 - 4)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.45,
-            _GT_COLOR,
-            1,
-            cv2.LINE_AA,
-        )
+        draw_label(img, tag, x1, y1, _GT_COLOR)
 
 
 def draw_predictions(
@@ -112,16 +153,7 @@ def draw_predictions(
         thick = 4 if cid == highlight_class else 2
         cv2.rectangle(img, (x1, y1), (x2, y2), color, thick)
         tag = f"P {names.get(cid, cid)} {conf:.2f}"
-        cv2.putText(
-            img,
-            tag,
-            (x1, max(14, y1 - 6)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.45,
-            color,
-            1,
-            cv2.LINE_AA,
-        )
+        draw_label(img, tag, x1, y1, color)
 
 
 def process_one(
