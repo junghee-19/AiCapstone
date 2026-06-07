@@ -2,6 +2,8 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-07 | Reference nearest coordinate | [2026-06-07_reference-nearest-coordinate.md](2026-06-07_reference-nearest-coordinate.md) |
+| 2026-06-07 | Reference match condition | [2026-06-07_reference-match-condition.md](2026-06-07_reference-match-condition.md) |
 | 2026-06-07 | Reference one to one matching | [2026-06-07_reference-one-to-one-matching.md](2026-06-07_reference-one-to-one-matching.md) |
 | 2026-06-07 | Reference orientation selection | [2026-06-07_reference-orientation-selection.md](2026-06-07_reference-orientation-selection.md) |
 | 2026-06-07 | Restore align reference fiducials | [2026-06-07_restore-align-reference-fiducials.md](2026-06-07_restore-align-reference-fiducials.md) |

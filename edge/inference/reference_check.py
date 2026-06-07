@@ -296,8 +296,8 @@ def _match_reference_components(
     for cls, refs in refs_by_class.items():
         candidates = by_class.get(cls, [])
         pair_candidates: list[tuple[float, float, int, int]] = []
-        nearest: dict[int, tuple[float, float]] = {
-            ref_idx: (float("inf"), 0.0)
+        nearest: dict[int, tuple[float, float, Optional[float], Optional[float]]] = {
+            ref_idx: (float("inf"), 0.0, None, None)
             for ref_idx in range(len(refs))
         }
 
@@ -308,9 +308,9 @@ def _match_reference_components(
                 dist = math.hypot(d.center_x - ex_x, d.center_y - ex_y)
                 iou = _bbox_iou(expected_bbox, d.bbox)
                 if dist < nearest[ref_idx][0]:
-                    nearest[ref_idx] = (dist, iou)
+                    nearest[ref_idx] = (dist, iou, d.center_x, d.center_y)
                 center_in_expected = _center_in_expanded_bbox(d, expected_bbox, tolerance_px)
-                location_matches = dist <= tolerance_px and (center_in_expected or iou > 0.0)
+                location_matches = center_in_expected or iou >= 0.02 or dist <= tolerance_px
                 if location_matches:
                     pair_candidates.append((dist, -iou, ref_idx, det_idx))
 
@@ -347,15 +347,20 @@ def _match_reference_components(
                 )
                 continue
 
-            nearest_dist, nearest_iou = nearest[ref_idx]
+            nearest_dist, nearest_iou, nearest_x, nearest_y = nearest[ref_idx]
+            nearest_at = (
+                f"({nearest_x:.0f},{nearest_y:.0f})"
+                if nearest_x is not None and nearest_y is not None
+                else "none"
+            )
             logger.debug(
-                "[reference] missing candidate orientation=%s class=%s expected=(%.0f,%.0f), nearest=%.1fpx tolerance=%.1fpx",
-                orientation_label, cls, ex_x, ex_y, nearest_dist, tolerance_px,
+                "[reference] missing candidate orientation=%s class=%s expected=(%.0f,%.0f), nearest_at=%s nearest=%.1fpx tolerance=%.1fpx iou=%.3f",
+                orientation_label, cls, ex_x, ex_y, nearest_at, nearest_dist, tolerance_px, nearest_iou,
             )
             size_w = max(20.0, float(expected_bbox.get("width", bbox.get("width", 30.0))))
             size_h = max(20.0, float(expected_bbox.get("height", bbox.get("height", 30.0))))
             missing.append(DefectPayload(
-                defect_type=f"MISSING:{cls}:expected_at=({ex_x:.0f},{ex_y:.0f}),nearest={nearest_dist:.1f}px,iou={nearest_iou:.3f}",
+                defect_type=f"MISSING:{cls}:expected_at=({ex_x:.0f},{ex_y:.0f}),nearest_at={nearest_at},nearest={nearest_dist:.1f}px,iou={nearest_iou:.3f}",
                 confidence=1.0,
                 bbox_x=max(0.0, float(expected_bbox.get("x", ex_x - size_w / 2.0))),
                 bbox_y=max(0.0, float(expected_bbox.get("y", ex_y - size_h / 2.0))),
