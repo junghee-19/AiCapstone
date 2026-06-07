@@ -11,7 +11,8 @@
  */
 
 import { useState, useMemo } from 'react'
-import { Search, Filter, Download, Trash2, Loader2 } from 'lucide-react'
+import type { Dispatch, SetStateAction } from 'react'
+import { Search, Filter, Download, Trash2, Loader2, ChevronDown, RotateCcw } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import InspectionTable from '@/components/inspection/InspectionTable'
@@ -20,6 +21,12 @@ import {
   deleteAllInspections,
   deleteInspectionsByPeriod,
 } from '@/api/inspectionApi'
+import {
+  DEFECT_LABEL,
+  isNormalComponentType,
+  missingClassOf,
+  defectColor,
+} from '@/types/inspection'
 import type { InspectionResultType } from '@/types/inspection'
 
 // ── 결과 필터 버튼 ────────────────────────────────────────────────────────────
@@ -64,6 +71,62 @@ function FilterButton({ label, value, current, count, onClick }: FilterButtonPro
   )
 }
 
+// ── 결함·누락 상세 필터 ───────────────────────────────────────────────────────
+
+/** defects[] 원소를 큰 범주로 분류 */
+type DefectCategory = 'DEFECT' | 'MISSING' | 'ANOMALY' | 'NORMAL'
+
+function categorizeDefect(defectType: string): DefectCategory {
+  if (defectType.startsWith('MISSING:')) return 'MISSING'
+  if (defectType.startsWith('ANOMALY:')) return 'ANOMALY'
+  if (isNormalComponentType(defectType)) return 'NORMAL'
+  return 'DEFECT'
+}
+
+/** 결함 칩을 묶는 그룹 키(한글 라벨) — TRACE_OPEN·trace_open 등을 한 칩으로 합침 */
+function defectGroupLabel(defectType: string): string {
+  return DEFECT_LABEL[defectType] ?? DEFECT_LABEL[defectType.toUpperCase()] ?? defectType
+}
+
+/** 누락 칩 라벨 — 클래스명 → "<부품명> 누락" */
+function missingGroupLabel(cls: string): string {
+  const korean = DEFECT_LABEL[cls] ?? DEFECT_LABEL[cls.toUpperCase()] ?? cls
+  return `${korean} 누락`
+}
+
+interface DetailOption {
+  key:   string   // 선택 상태 비교용 키
+  label: string   // 표시 라벨
+  count: number   // 해당 항목을 포함하는 검사 건수
+  color: string   // 점 색상
+}
+
+interface FilterChipProps {
+  option:   DetailOption
+  selected: boolean
+  onToggle: (key: string) => void
+}
+
+function FilterChip({ option, selected, onToggle }: FilterChipProps) {
+  return (
+    <button
+      onClick={() => onToggle(option.key)}
+      className={clsx(
+        'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
+        selected
+          ? 'bg-indigo-600 text-white border-indigo-600'
+          : 'bg-Black-4% text-Black-60% border-Black-10% hover:text-Black-100% hover:bg-Black-10%'
+      )}
+    >
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: option.color }} />
+      {option.label}
+      <span className={clsx('text-[10px]', selected ? 'text-white/70' : 'text-Black-40%')}>
+        {option.count}
+      </span>
+    </button>
+  )
+}
+
 // ── CSV 다운로드 유틸 ─────────────────────────────────────────────────────────
 
 function downloadCsv(data: ReturnType<typeof useAllInspections>['data']) {
@@ -102,6 +165,23 @@ export default function HistoryPage() {
 
   /* 결과 필터 상태 */
   const [resultFilter, setResultFilter] = useState<ResultFilter>('ALL')
+
+  /* 결함·누락 상세 필터 상태 */
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [selDefects,  setSelDefects]  = useState<Set<string>>(new Set())  // 결함 그룹 라벨
+  const [selMissings, setSelMissings] = useState<Set<string>>(new Set())  // 누락 클래스명
+
+  /* Set 토글 헬퍼 */
+  const toggleInSet = (
+    setter: Dispatch<SetStateAction<Set<string>>>,
+    key: string,
+  ) =>
+    setter((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
 
   /* 날짜 범위 필터 상태 (YYYY-MM-DD 형식) */
   const today = getLocalDateString()
@@ -164,6 +244,52 @@ export default function HistoryPage() {
     })
   }
 
+  /* 데이터에 실제로 존재하는 결함 유형·누락 부품 목록 자동 추출 */
+  const { defectOptions, missingOptions } = useMemo(() => {
+    const defectMap  = new Map<string, DetailOption>()  // 그룹라벨 → 옵션
+    const missingMap = new Map<string, DetailOption>()  // 클래스명 → 옵션
+
+    for (const log of allLogs) {
+      /* 한 건 안에서 중복 카운트 방지용 */
+      const seenDefects  = new Set<string>()
+      const seenMissings = new Set<string>()
+
+      for (const d of log.defects) {
+        const cat = categorizeDefect(d.defectType)
+        if (cat === 'DEFECT') {
+          const label = defectGroupLabel(d.defectType)
+          if (!seenDefects.has(label)) {
+            seenDefects.add(label)
+            const cur = defectMap.get(label)
+            if (cur) cur.count += 1
+            else defectMap.set(label, { key: label, label, count: 1, color: defectColor(d.defectType) })
+          }
+        } else if (cat === 'MISSING') {
+          const cls = missingClassOf(d.defectType)
+          if (!seenMissings.has(cls)) {
+            seenMissings.add(cls)
+            const cur = missingMap.get(cls)
+            if (cur) cur.count += 1
+            else missingMap.set(cls, { key: cls, label: missingGroupLabel(cls), count: 1, color: defectColor(d.defectType) })
+          }
+        }
+      }
+    }
+
+    const byCountDesc = (a: DetailOption, b: DetailOption) => b.count - a.count
+    return {
+      defectOptions:  [...defectMap.values()].sort(byCountDesc),
+      missingOptions: [...missingMap.values()].sort(byCountDesc),
+    }
+  }, [allLogs])
+
+  const activeDetailCount = selDefects.size + selMissings.size
+
+  const resetDetailFilter = () => {
+    setSelDefects(new Set())
+    setSelMissings(new Set())
+  }
+
   /* 필터 적용된 데이터 계산 (useMemo로 불필요한 재연산 방지) */
   const filteredLogs = useMemo(() => {
     return allLogs.filter((log) => {
@@ -175,9 +301,20 @@ export default function HistoryPage() {
       if (dateFrom && logDate < dateFrom) return false
       if (dateTo   && logDate > dateTo)   return false
 
+      /* 결함·누락 상세 필터 (선택된 항목 중 하나라도 포함하면 통과 — OR) */
+      if (selDefects.size || selMissings.size) {
+        const matched = log.defects.some((d) => {
+          const cat = categorizeDefect(d.defectType)
+          if (cat === 'DEFECT')  return selDefects.has(defectGroupLabel(d.defectType))
+          if (cat === 'MISSING') return selMissings.has(missingClassOf(d.defectType))
+          return false
+        })
+        if (!matched) return false
+      }
+
       return true
     })
-  }, [allLogs, resultFilter, dateFrom, dateTo])
+  }, [allLogs, resultFilter, dateFrom, dateTo, selDefects, selMissings])
 
   /* 필터 결과 미니 통계 */
   const passCount = filteredLogs.filter((l) => l.result === 'PASS').length
@@ -274,6 +411,78 @@ export default function HistoryPage() {
             <FilterButton label="PASS"  value="PASS" current={resultFilter} count={allLogs.filter(l => l.result==='PASS').length} onClick={setResultFilter} />
             <FilterButton label="FAIL"  value="FAIL" current={resultFilter} count={allLogs.filter(l => l.result==='FAIL').length} onClick={setResultFilter} />
           </div>
+        </div>
+
+        {/* ── 결함·누락 상세 필터 (토글) ───────────────────────────────────────── */}
+        <div className="mt-3 pt-3 border-t border-Black-10%">
+          <button
+            onClick={() => setDetailOpen((o) => !o)}
+            className="flex items-center gap-1.5 text-xs font-medium text-Black-60% hover:text-Black-100% transition-colors"
+          >
+            <ChevronDown
+              size={14}
+              className={clsx('transition-transform', detailOpen && 'rotate-180')}
+            />
+            결함·누락 상세 필터
+            {activeDetailCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] leading-none">
+                {activeDetailCount}
+              </span>
+            )}
+          </button>
+
+          {detailOpen && (
+            <div className="mt-3 space-y-3">
+              {/* 결함 그룹 */}
+              <div>
+                <div className="text-xs text-Black-40% mb-1.5">결함</div>
+                {defectOptions.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {defectOptions.map((opt) => (
+                      <FilterChip
+                        key={opt.key}
+                        option={opt}
+                        selected={selDefects.has(opt.key)}
+                        onToggle={(k) => toggleInSet(setSelDefects, k)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-Black-40%">기록된 결함이 없습니다.</p>
+                )}
+              </div>
+
+              {/* 누락 그룹 */}
+              <div>
+                <div className="text-xs text-Black-40% mb-1.5">누락</div>
+                {missingOptions.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {missingOptions.map((opt) => (
+                      <FilterChip
+                        key={opt.key}
+                        option={opt}
+                        selected={selMissings.has(opt.key)}
+                        onToggle={(k) => toggleInSet(setSelMissings, k)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-Black-40%">기록된 누락이 없습니다.</p>
+                )}
+              </div>
+
+              {/* 초기화 */}
+              {activeDetailCount > 0 && (
+                <button
+                  onClick={resetDetailFilter}
+                  className="flex items-center gap-1.5 text-xs font-medium text-Black-40% hover:text-Black-100% transition-colors"
+                >
+                  <RotateCcw size={12} />
+                  상세 필터 초기화
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

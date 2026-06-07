@@ -11,8 +11,8 @@
  * - 클릭으로 상세 DefectViewer 연동
  */
 
-import { useMemo, useState } from 'react'
-import { ChevronDown, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { ChevronDown, AlertCircle, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 import type { InspectionLog } from '@/types/inspection'
 import {
@@ -163,6 +163,10 @@ export default function InspectionTable({
   /* ID 정렬 — 기본 내림차순 (최신 검사 우선) */
   const [idSort, setIdSort] = useState<'asc' | 'desc'>('desc')
 
+  /* 페이지네이션 상태 — 페이지당 개수(10/20)와 현재 페이지(1-based) */
+  const [pageSize, setPageSize] = useState<number>(10)
+  const [page, setPage]         = useState<number>(1)
+
   /* 결과 필터 + ID 정렬 적용 */
   const sortedFiltered = useMemo(() => {
     const base = resultFilter
@@ -172,6 +176,26 @@ export default function InspectionTable({
   }, [logs, resultFilter, idSort])
 
   const filtered = sortedFiltered
+
+  /* 목록/필터/정렬/페이지크기 변경 시 첫 페이지로 리셋 */
+  useEffect(() => {
+    setPage(1)
+  }, [logs, resultFilter, idSort, pageSize])
+
+  /* 페이지 슬라이싱 — page가 범위를 벗어나면 안전하게 보정 */
+  const totalPages   = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const currentPage  = Math.min(page, totalPages)
+  const startIdx     = (currentPage - 1) * pageSize
+  const paged        = filtered.slice(startIdx, startIdx + pageSize)
+
+  /* 현재 페이지 주변 페이지 번호 목록 (최대 5개) */
+  const pageWindow = useMemo(() => {
+    const span = 5
+    let start = Math.max(1, currentPage - 2)
+    const end = Math.min(totalPages, start + span - 1)
+    start = Math.max(1, end - span + 1)
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+  }, [currentPage, totalPages])
 
   const HEADERS: { key: string; label: string; sortable?: boolean }[] = [
     { key: 'id',         label: 'ID', sortable: true },
@@ -187,6 +211,29 @@ export default function InspectionTable({
 
   return (
     <>
+      {/* 상단 바 — 우측 상단: 표시 범위 + 페이지당 개수 드롭다운 */}
+      {!isLoading && filtered.length > 0 && (
+        <div className="flex items-center justify-end gap-3 mb-3 text-xs text-Black-40%">
+          <span>
+            총 <span className="text-Black-100% font-semibold">{filtered.length}</span>건 중{' '}
+            <span className="text-Black-100% font-semibold">
+              {startIdx + 1}–{Math.min(startIdx + pageSize, filtered.length)}
+            </span>
+          </span>
+          <label className="flex items-center gap-1.5">
+            페이지당
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="bg-Black-4% border border-Black-10% text-Black-80% rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value={10}>10개</option>
+              <option value={20}>20개</option>
+            </select>
+          </label>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-Black-10%">
         <table className="w-full text-sm">
           {/* 헤더 */}
@@ -228,7 +275,7 @@ export default function InspectionTable({
                 </td>
               </tr>
             ) : (
-              filtered.map((log) => {
+              paged.map((log) => {
                 const { date, time } = formatDateTime(log.inspectedAt)
                 const isOpen = selectedId === log.id
                 const toggle = () => setSelectedId(isOpen ? undefined : log.id)
@@ -311,6 +358,48 @@ export default function InspectionTable({
           </tbody>
         </table>
       </div>
+
+      {/* 페이지 이동 — 중앙 하단 */}
+      {!isLoading && filtered.length > 0 && (
+        <div className="flex items-center justify-center gap-1 mt-4">
+          <button
+            type="button"
+            aria-label="이전 페이지"
+            disabled={currentPage === 1}
+            onClick={() => setPage(currentPage - 1)}
+            className="p-1.5 rounded-lg text-Black-60% hover:bg-Black-10% disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {pageWindow.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPage(p)}
+              aria-current={p === currentPage ? 'page' : undefined}
+              className={clsx(
+                'min-w-[2rem] px-2 py-1 rounded-lg text-xs font-medium transition-colors',
+                p === currentPage
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-Black-60% hover:bg-Black-10%'
+              )}
+            >
+              {p}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            aria-label="다음 페이지"
+            disabled={currentPage === totalPages}
+            onClick={() => setPage(currentPage + 1)}
+            className="p-1.5 rounded-lg text-Black-60% hover:bg-Black-10% disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
 
       {selectedId !== undefined && (
         <div
