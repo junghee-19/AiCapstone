@@ -135,10 +135,10 @@ class Settings(BaseSettings):
 
     # ── 좌표 정합(Similarity: translation/rotation/scale) ────────────────────
     # 정합 기준 피듀셜 좌표 (정합 결과 이미지 좌표계)
-    ALIGN_REF_FIDUCIAL1_X: int = Field(default=607, ge=0)
-    ALIGN_REF_FIDUCIAL1_Y: int = Field(default=726, ge=0)
-    ALIGN_REF_FIDUCIAL2_X: int = Field(default=1240, ge=0)
-    ALIGN_REF_FIDUCIAL2_Y: int = Field(default=358, ge=0)
+    ALIGN_REF_FIDUCIAL1_X: int = Field(default=278, ge=0)
+    ALIGN_REF_FIDUCIAL1_Y: int = Field(default=908, ge=0)
+    ALIGN_REF_FIDUCIAL2_X: int = Field(default=1528, ge=0)
+    ALIGN_REF_FIDUCIAL2_Y: int = Field(default=202, ge=0)
     # 정합 출력 캔버스 크기
     ALIGN_OUTPUT_WIDTH: int = Field(default=1920, ge=320, le=4096)
     ALIGN_OUTPUT_HEIGHT: int = Field(default=1080, ge=240, le=4096)
