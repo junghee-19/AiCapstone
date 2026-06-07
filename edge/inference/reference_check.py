@@ -267,6 +267,70 @@ def _choose_rotated_orientation(
     return False
 
 
+def _assign_one_to_one_matches(
+    pair_candidates: list[tuple[float, float, int, int]],
+) -> dict[int, tuple[int, float, float]]:
+    refs = sorted({ref_idx for _, _, ref_idx, _ in pair_candidates})
+    dets = sorted({det_idx for _, _, _, det_idx in pair_candidates})
+
+    # Small per-class groups should maximize match cardinality before minimizing distance.
+    # If a class unexpectedly produces too many candidates, keep the bounded greedy fallback.
+    if len(dets) > 20:
+        assigned: dict[int, tuple[int, float, float]] = {}
+        used_refs: set[int] = set()
+        used_detections: set[int] = set()
+        for dist, neg_iou, ref_idx, det_idx in sorted(pair_candidates):
+            if ref_idx in used_refs or det_idx in used_detections:
+                continue
+            used_refs.add(ref_idx)
+            used_detections.add(det_idx)
+            assigned[ref_idx] = (det_idx, dist, -neg_iou)
+        return assigned
+
+    det_to_bit = {det_idx: bit for bit, det_idx in enumerate(dets)}
+    candidates_by_ref: dict[int, list[tuple[float, float, int]]] = {
+        ref_idx: []
+        for ref_idx in refs
+    }
+    for dist, neg_iou, ref_idx, det_idx in pair_candidates:
+        candidates_by_ref.setdefault(ref_idx, []).append((dist, neg_iou, det_idx))
+    for candidates in candidates_by_ref.values():
+        candidates.sort()
+
+    from functools import lru_cache
+
+    @lru_cache(maxsize=None)
+    def best_from(pos: int, used_mask: int) -> tuple[tuple[int, float, float], tuple[tuple[int, int, float, float], ...]]:
+        if pos >= len(refs):
+            return (0, 0.0, 0.0), ()
+
+        ref_idx = refs[pos]
+        best_score, best_pairs = best_from(pos + 1, used_mask)
+
+        for dist, neg_iou, det_idx in candidates_by_ref.get(ref_idx, []):
+            bit = 1 << det_to_bit[det_idx]
+            if used_mask & bit:
+                continue
+            next_score, next_pairs = best_from(pos + 1, used_mask | bit)
+            iou = -neg_iou
+            score = (
+                next_score[0] + 1,
+                next_score[1] - dist,
+                next_score[2] + iou,
+            )
+            if score > best_score:
+                best_score = score
+                best_pairs = ((ref_idx, det_idx, dist, iou),) + next_pairs
+
+        return best_score, best_pairs
+
+    _, pairs = best_from(0, 0)
+    return {
+        ref_idx: (det_idx, dist, iou)
+        for ref_idx, det_idx, dist, iou in pairs
+    }
+
+
 def _match_reference_components(
     components: list[dict],
     by_class: dict[str, list[DetectionItem]],
@@ -314,17 +378,7 @@ def _match_reference_components(
                 if location_matches:
                     pair_candidates.append((dist, -iou, ref_idx, det_idx))
 
-        pair_candidates.sort()
-        used_refs: set[int] = set()
-        used_detections: set[int] = set()
-        assigned: dict[int, tuple[int, float, float]] = {}
-
-        for dist, neg_iou, ref_idx, det_idx in pair_candidates:
-            if ref_idx in used_refs or det_idx in used_detections:
-                continue
-            used_refs.add(ref_idx)
-            used_detections.add(det_idx)
-            assigned[ref_idx] = (det_idx, dist, -neg_iou)
+        assigned = _assign_one_to_one_matches(pair_candidates)
 
         for ref_idx, ref_data in enumerate(refs):
             ex_x, ex_y = ref_data["center"]
