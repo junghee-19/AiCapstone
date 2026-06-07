@@ -6,7 +6,7 @@
  */
 
 import { NavLink } from 'react-router-dom'
-import { BarChart2, ClipboardList, Images, Layers3, Settings, Cpu } from 'lucide-react'
+import { BarChart2, ClipboardList, Layers3, Settings, Cpu } from 'lucide-react' // Images: 데이터셋 메뉴 복원 시 추가
 import clsx from 'clsx'
 
 const NAV_ITEMS = [
@@ -34,12 +34,13 @@ const NAV_ITEMS = [
     label: 'PCB 정보',
     end:   false,
   },
-  {
-    to:    '/dataset-images',
-    icon:  Images,
-    label: '데이터셋',
-    end:   false,
-  },
+  // 데이터셋 메뉴 임시 숨김 — 나중에 복원 시 아래 블록 + Images import 주석 해제
+  // {
+  //   to:    '/dataset-images',
+  //   icon:  Images,
+  //   label: '데이터셋',
+  //   end:   false,
+  // },
   {
     to:    '/settings',
     icon:  Settings,
