@@ -2,6 +2,7 @@
 
 | Date | Task | File |
 | --- | --- | --- |
+| 2026-06-07 | Reference one to one matching | [2026-06-07_reference-one-to-one-matching.md](2026-06-07_reference-one-to-one-matching.md) |
 | 2026-06-07 | Reference orientation selection | [2026-06-07_reference-orientation-selection.md](2026-06-07_reference-orientation-selection.md) |
 | 2026-06-07 | Restore align reference fiducials | [2026-06-07_restore-align-reference-fiducials.md](2026-06-07_restore-align-reference-fiducials.md) |
 | 2026-06-05 | Reference check 180 orientation | [2026-06-05_reference-check-180-orientation.md](2026-06-05_reference-check-180-orientation.md) |

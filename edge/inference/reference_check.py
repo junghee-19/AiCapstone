@@ -274,70 +274,94 @@ def _match_reference_components(
     tolerance_px: float,
     orientation_label: str,
 ) -> tuple[list[DefectPayload], int, float]:
-    used_by_class: dict[str, set[int]] = {}
     missing: list[DefectPayload] = []
     matched = 0
     total_distance = 0.0
 
-    for ref_comp in components:
-        cls = str(ref_comp["class"]).lower()
+    refs_by_class: dict[str, list[dict]] = {}
+    for idx, ref_comp in enumerate(components):
+        cls = str(ref_comp.get("class", "")).lower()
         bbox = ref_comp.get("bbox", {})
         rx = float(bbox.get("x", 0.0)) + float(bbox.get("width", 0.0)) / 2.0
         ry = float(bbox.get("y", 0.0)) + float(bbox.get("height", 0.0)) / 2.0
         ex_x, ex_y = transform(rx, ry)
         expected_bbox = _transform_bbox(bbox, transform)
+        refs_by_class.setdefault(cls, []).append({
+            "index": idx,
+            "component": ref_comp,
+            "center": (ex_x, ex_y),
+            "expected_bbox": expected_bbox,
+        })
 
+    for cls, refs in refs_by_class.items():
         candidates = by_class.get(cls, [])
-        used = used_by_class.setdefault(cls, set())
-        best_idx = -1
-        best_dist = float("inf")
-        best_iou = 0.0
-        nearest_dist = float("inf")
-        nearest_iou = 0.0
-        for idx, d in enumerate(candidates):
-            if idx in used:
+        pair_candidates: list[tuple[float, float, int, int]] = []
+        nearest: dict[int, tuple[float, float]] = {
+            ref_idx: (float("inf"), 0.0)
+            for ref_idx in range(len(refs))
+        }
+
+        for ref_idx, ref_data in enumerate(refs):
+            ex_x, ex_y = ref_data["center"]
+            expected_bbox = ref_data["expected_bbox"]
+            for det_idx, d in enumerate(candidates):
+                dist = math.hypot(d.center_x - ex_x, d.center_y - ex_y)
+                iou = _bbox_iou(expected_bbox, d.bbox)
+                if dist < nearest[ref_idx][0]:
+                    nearest[ref_idx] = (dist, iou)
+                center_in_expected = _center_in_expanded_bbox(d, expected_bbox, tolerance_px)
+                location_matches = dist <= tolerance_px and (center_in_expected or iou > 0.0)
+                if location_matches:
+                    pair_candidates.append((dist, -iou, ref_idx, det_idx))
+
+        pair_candidates.sort()
+        used_refs: set[int] = set()
+        used_detections: set[int] = set()
+        assigned: dict[int, tuple[int, float, float]] = {}
+
+        for dist, neg_iou, ref_idx, det_idx in pair_candidates:
+            if ref_idx in used_refs or det_idx in used_detections:
                 continue
-            dist = math.hypot(d.center_x - ex_x, d.center_y - ex_y)
-            iou = _bbox_iou(expected_bbox, d.bbox)
-            if dist < nearest_dist:
-                nearest_dist = dist
-                nearest_iou = iou
-            center_in_expected = _center_in_expanded_bbox(d, expected_bbox, tolerance_px)
-            location_matches = dist <= tolerance_px and (center_in_expected or iou > 0.0)
-            if location_matches and (best_idx < 0 or dist < best_dist):
-                best_dist = dist
-                best_iou = iou
-                best_idx = idx
+            used_refs.add(ref_idx)
+            used_detections.add(det_idx)
+            assigned[ref_idx] = (det_idx, dist, -neg_iou)
 
-        if best_idx >= 0:
-            used.add(best_idx)
-            matched += 1
-            total_distance += best_dist
+        for ref_idx, ref_data in enumerate(refs):
+            ex_x, ex_y = ref_data["center"]
+            expected_bbox = ref_data["expected_bbox"]
+            ref_comp = ref_data["component"]
+            bbox = ref_comp.get("bbox", {})
+
+            if ref_idx in assigned:
+                _, best_dist, best_iou = assigned[ref_idx]
+                matched += 1
+                total_distance += best_dist
+                logger.debug(
+                    "[reference] matched orientation=%s class=%s expected=(%.0f,%.0f) dist=%.1fpx iou=%.3f",
+                    orientation_label,
+                    cls,
+                    ex_x,
+                    ex_y,
+                    best_dist,
+                    best_iou,
+                )
+                continue
+
+            nearest_dist, nearest_iou = nearest[ref_idx]
             logger.debug(
-                "[reference] matched orientation=%s class=%s expected=(%.0f,%.0f) dist=%.1fpx iou=%.3f",
-                orientation_label,
-                cls,
-                ex_x,
-                ex_y,
-                best_dist,
-                best_iou,
+                "[reference] missing candidate orientation=%s class=%s expected=(%.0f,%.0f), nearest=%.1fpx tolerance=%.1fpx",
+                orientation_label, cls, ex_x, ex_y, nearest_dist, tolerance_px,
             )
-            continue
-
-        logger.debug(
-            "[레퍼런스] 누락 후보(%s): class=%s, 예상위치=(%.0f,%.0f), 최근접거리=%.1fpx (허용=%.1fpx)",
-            orientation_label, cls, ex_x, ex_y, nearest_dist, tolerance_px,
-        )
-        size_w = max(20.0, float(expected_bbox.get("width", bbox.get("width", 30.0))))
-        size_h = max(20.0, float(expected_bbox.get("height", bbox.get("height", 30.0))))
-        missing.append(DefectPayload(
-            defect_type=f"MISSING:{cls}:expected_at=({ex_x:.0f},{ex_y:.0f}),nearest={nearest_dist:.1f}px,iou={nearest_iou:.3f}",
-            confidence=1.0,
-            bbox_x=max(0.0, float(expected_bbox.get("x", ex_x - size_w / 2.0))),
-            bbox_y=max(0.0, float(expected_bbox.get("y", ex_y - size_h / 2.0))),
-            bbox_width=size_w,
-            bbox_height=size_h,
-        ))
+            size_w = max(20.0, float(expected_bbox.get("width", bbox.get("width", 30.0))))
+            size_h = max(20.0, float(expected_bbox.get("height", bbox.get("height", 30.0))))
+            missing.append(DefectPayload(
+                defect_type=f"MISSING:{cls}:expected_at=({ex_x:.0f},{ex_y:.0f}),nearest={nearest_dist:.1f}px,iou={nearest_iou:.3f}",
+                confidence=1.0,
+                bbox_x=max(0.0, float(expected_bbox.get("x", ex_x - size_w / 2.0))),
+                bbox_y=max(0.0, float(expected_bbox.get("y", ex_y - size_h / 2.0))),
+                bbox_width=size_w,
+                bbox_height=size_h,
+            ))
 
     return missing, matched, total_distance
 
