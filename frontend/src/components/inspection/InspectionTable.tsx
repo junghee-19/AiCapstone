@@ -15,7 +15,13 @@ import { useMemo, useState } from 'react'
 import { ChevronDown, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react'
 import clsx from 'clsx'
 import type { InspectionLog } from '@/types/inspection'
-import { defectDisplayName, DEFECT_COLOR } from '@/types/inspection'
+import {
+  defectDisplayName,
+  defectColor,
+  isNormalComponentType,
+  dedupeMissingReasons,
+  missingShortLabel,
+} from '@/types/inspection'
 import DefectViewer from './DefectViewer'
 
 // ── 보조 컴포넌트 ─────────────────────────────────────────────────────────────
@@ -38,18 +44,24 @@ function ResultBadge({ result }: { result: 'PASS' | 'FAIL' | 'SKIPPED' }) {
   )
 }
 
-/** 결함 종류 태그 목록 */
+/** 결함 종류 태그 목록 — 정상 부품 제외, 누락 중복 정리, 클래스별 색상 표시 */
 function DefectTags({ defects }: { defects: InspectionLog['defects'] }) {
-  if (!defects.length) {
-    return <span className="text-xs text-Black-40%">—</span>
-  }
+  // 정상 부품 제외 → 결함/누락만
+  const relevant = defects.filter((d) => !isNormalComponentType(d.defectType))
+  // 누락은 카운트·위치 두 형태로 중복 기록되므로 누락만 따로 정리 후 결함과 합침
+  const missing = relevant.filter((d) => d.defectType.startsWith('MISSING:'))
+  const others = relevant.filter((d) => !d.defectType.startsWith('MISSING:'))
+  const items = [...others, ...dedupeMissingReasons(missing)]
 
   const grouped = new Map<
     string,
     { count: number; color: string }
   >()
-  defects.forEach((d) => {
-    const label = defectDisplayName(d.defectType)
+  items.forEach((d) => {
+    // 누락은 좌표·개수 생략하고 "<부품명> 누락"으로만 (예: "IC 누락")
+    const label = d.defectType.startsWith('MISSING:')
+      ? missingShortLabel(d.defectType)
+      : defectDisplayName(d.defectType)
     const prev = grouped.get(label)
     if (prev) {
       prev.count += 1
@@ -57,9 +69,13 @@ function DefectTags({ defects }: { defects: InspectionLog['defects'] }) {
     }
     grouped.set(label, {
       count: 1,
-      color: DEFECT_COLOR[d.defectType] ?? '#9ca3af',
+      color: defectColor(d.defectType),
     })
   })
+
+  if (grouped.size === 0) {
+    return <span className="text-xs text-Black-40%">—</span>
+  }
 
   return (
     <div className="flex flex-wrap gap-1">

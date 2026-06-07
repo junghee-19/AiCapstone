@@ -145,6 +145,77 @@ export const DEFECT_COLOR: Record<string, string> = {
   ANOMALY:              '#dc2626',  // red-600
 }
 
+/**
+ * 정상(부품)으로 분류되는 검출 클래스 — 결함이 아니라 PCB 위 정상 부품.
+ * 결함/누락 표기와 구분하는 단일 기준점.
+ */
+export const NORMAL_COMPONENT_TYPES = new Set([
+  'mount_hole',
+  'gold_finger_row',
+  'fiducial',
+  'smd_array_block',
+  'ic_chip',
+  'edge_connector_zone',
+])
+
+/** 정상 부품 검출 여부 — MISSING(누락)·ANOMALY(검토필요)는 정상 아님 */
+export function isNormalComponentType(defectType: string): boolean {
+  const type = String(defectType || '')
+  if (type.startsWith('MISSING:') || type.startsWith('ANOMALY:')) return false
+  return NORMAL_COMPONENT_TYPES.has(type.trim().toLowerCase())
+}
+
+// ── 누락(MISSING) 표기 헬퍼 ───────────────────────────────────────────────────
+
+/** "MISSING:cls:expected_at=(x,y)..." 형태에서 정상 위치 좌표 추출 (없으면 null) */
+export function missingPositionOf(defectType: string): { x: number; y: number } | null {
+  const m = defectType.match(/expected_at=\(([\d.-]+),([\d.-]+)\)/)
+  if (!m) return null
+  const x = Number(m[1])
+  const y = Number(m[2])
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null
+}
+
+/** 위치 정보 없이 개수만 있는 누락 (예: "MISSING:ic_chip:expected=2,detected=1,...") */
+export function isCountOnlyMissing(defectType: string): boolean {
+  return defectType.startsWith('MISSING:') && !missingPositionOf(defectType)
+}
+
+/** 누락 클래스명 추출 — "MISSING:ic_chip:..." → "ic_chip" */
+export function missingClassOf(defectType: string): string {
+  return defectType.startsWith('MISSING:') ? defectType.split(':')[1] ?? defectType : defectType
+}
+
+/** 누락 태그용 간단 라벨 — 좌표·개수 생략하고 "<부품명> 누락"만 (예: "IC 누락") */
+export function missingShortLabel(defectType: string): string {
+  const cls = missingClassOf(defectType)
+  const korean = DEFECT_LABEL[cls] ?? DEFECT_LABEL[cls?.toUpperCase()] ?? cls
+  return `${korean} 누락`
+}
+
+/**
+ * 같은 부품의 누락이 카운트 기반 + 위치 기반으로 중복 기록되는 것을 정리.
+ * - 위치 기반 누락이 있는 클래스의 카운트-only 누락은 제거
+ * - 클래스 × (위치/카운트) 조합당 1건만 유지
+ */
+export function dedupeMissingReasons(defects: DefectDetail[]): DefectDetail[] {
+  const positionedClasses = new Set(
+    defects
+      .filter((d) => missingPositionOf(d.defectType))
+      .map((d) => missingClassOf(d.defectType))
+      .filter(Boolean),
+  )
+  const seen = new Set<string>()
+  return defects.filter((d) => {
+    const cls = missingClassOf(d.defectType)
+    if (isCountOnlyMissing(d.defectType) && positionedClasses.has(cls)) return false
+    const key = `${cls}:${missingPositionOf(d.defectType) ? 'position' : 'count'}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 /** 표시용 라벨 (한글 매핑 없으면 원문 그대로) */
 export function defectDisplayName(defectType: string): string {
   // ── Position Check — 카운트 기반 누락 ────────────────────────────────────

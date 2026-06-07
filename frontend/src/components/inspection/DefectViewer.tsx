@@ -6,11 +6,23 @@ import { useRef, useState, useEffect, useMemo, type PointerEvent, type ReactNode
 import { X, ImageOff, AlertCircle, Download, Eye, EyeOff, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { useInspectionById } from '@/hooks/useInspectionData'
 import type { DefectDetail, InspectionLog } from '@/types/inspection'
-import { defectDisplayName, defectColor } from '@/types/inspection'
+import {
+  defectDisplayName,
+  defectColor,
+  isNormalComponentType,
+  missingPositionOf,
+  isCountOnlyMissing,
+  missingClassOf,
+  missingShortLabel,
+  dedupeMissingReasons,
+} from '@/types/inspection'
 
 // ── 이미지 로드 전 기본값 (로드 후 naturalWidth/Height 사용) ───────────────
 const DEFAULT_REF_WIDTH = 1920
 const DEFAULT_REF_HEIGHT = 1080
+
+// 리스트에서 선택한 부품 강조 색 — 부품 자체 색과 무관하게 항상 동일(눈에 잘 띄는 노랑)
+const HIGHLIGHT_COLOR = '#facc15'
 
 // 라벨 배경 바 크기용 — 실제 픽셀 폭을 캔버스로 측정한다.
 // 글자 수 × 상수 추정은 한글(전각)·긴 라벨에서 틀어져 바가 글씨보다 작아진다.
@@ -52,57 +64,13 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
 
-function missingPositionOf(defectType: string): { x: number; y: number } | null {
-  const m = defectType.match(/expected_at=\(([\d.-]+),([\d.-]+)\)/)
-  if (!m) return null
-  const x = Number(m[1])
-  const y = Number(m[2])
-  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null
-}
-
-function isCountOnlyMissing(defectType: string): boolean {
-  return defectType.startsWith('MISSING:') && !missingPositionOf(defectType)
-}
-
-function missingClassOf(defectType: string): string {
-  return defectType.startsWith('MISSING:') ? defectType.split(':')[1] ?? defectType : defectType
-}
-
-function dedupeMissingReasons(defects: DefectDetail[]): DefectDetail[] {
-  const positionedClasses = new Set(
-    defects
-      .filter((d) => missingPositionOf(d.defectType))
-      .map((d) => missingClassOf(d.defectType))
-      .filter(Boolean),
-  )
-  const seen = new Set<string>()
-  return defects.filter((d) => {
-    const cls = missingClassOf(d.defectType)
-    if (isCountOnlyMissing(d.defectType) && positionedClasses.has(cls)) return false
-    const key = `${cls}:${missingPositionOf(d.defectType) ? 'position' : 'count'}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-}
-
-const NORMAL_COMPONENT_TYPES = new Set([
-  'mount_hole',
-  'gold_finger_row',
-  'fiducial',
-  'smd_array_block',
-  'ic_chip',
-  'edge_connector_zone',
-])
-
-function normalizedDefectType(defectType: string): string {
-  return String(defectType || '').trim().toLowerCase()
-}
-
 function isNormalComponent(d: DefectDetail): boolean {
-  const type = String(d.defectType || '')
-  if (type.startsWith('MISSING:') || type.startsWith('ANOMALY:')) return false
-  return NORMAL_COMPONENT_TYPES.has(normalizedDefectType(type))
+  return isNormalComponentType(d.defectType)
+}
+
+/** 리스트 ↔ 오버레이 박스 매칭용 안정 키 (배열 인덱스에 의존하지 않음) */
+function defectKey(d: DefectDetail): string {
+  return `${d.defectType}|${d.bboxX}|${d.bboxY}|${d.bboxWidth}|${d.bboxHeight}`
 }
 
 function zoomedCrop(crop: CropRect, imageSize: { w: number; h: number }, zoom: number): CropRect {
@@ -324,6 +292,7 @@ function DefectBox({
   color,
   scaleX,
   scaleY,
+  highlighted = false,
 }: {
   x: number
   y: number
@@ -334,6 +303,7 @@ function DefectBox({
   color: string
   scaleX: number
   scaleY: number
+  highlighted?: boolean
 }) {
   const sx = x * scaleX
   const sy = y * scaleY
@@ -343,10 +313,35 @@ function DefectBox({
   // 실제 글씨 폭 + 좌우 여백(좌 6 / 우 6) — 한글·긴 라벨도 바가 글씨를 다 덮음
   const tw = Math.ceil(measureTextWidth(cap, '700 11px ui-monospace, monospace')) + 12
   const ty = sy > 22 ? sy - 21 : sy + 3
+  const haloPad = 7
 
   return (
     <g>
-      <rect x={sx} y={sy} width={sw} height={sh} rx={2} fill="none" stroke={color} strokeWidth={2} />
+      {/* 선택 강조 — 부품 색과 무관한 고정 색(HIGHLIGHT_COLOR)으로 글로우 헤일로 + 반투명 채움 */}
+      {highlighted && (
+        <rect
+          x={sx - haloPad}
+          y={sy - haloPad}
+          width={sw + haloPad * 2}
+          height={sh + haloPad * 2}
+          rx={4}
+          fill={HIGHLIGHT_COLOR}
+          fillOpacity={0.2}
+          stroke={HIGHLIGHT_COLOR}
+          strokeOpacity={0.65}
+          strokeWidth={6}
+        />
+      )}
+      <rect
+        x={sx}
+        y={sy}
+        width={sw}
+        height={sh}
+        rx={2}
+        fill="none"
+        stroke={highlighted ? HIGHLIGHT_COLOR : color}
+        strokeWidth={highlighted ? 3.5 : 2}
+      />
       <rect x={sx} y={ty} width={tw} height={17} rx={4} fill="rgba(15,23,42,0.86)" stroke={color} strokeWidth={1.1} />
       <text
         x={sx + 6}
@@ -485,8 +480,8 @@ function OverlayToggle({
       className={[
         'flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-xs font-semibold transition-colors',
         checked
-          ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-100'
-          : 'border-Black-10% bg-white text-Black-40% hover:text-Black-80%',
+          ? 'border-indigo-500 bg-indigo-500/15 text-indigo-700'
+          : 'border-Black-10% bg-white text-Black-60% hover:text-Black-100%',
       ].join(' ')}
       aria-pressed={checked}
     >
@@ -538,6 +533,8 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
   const [showNormalLabels, setShowNormalLabels] = useState(true)
   const [showDefectLabels, setShowDefectLabels] = useState(true)
   const [showMissingLabels, setShowMissingLabels] = useState(true)
+  /* 리스트에서 클릭해 강조 중인 정상 부품 (defectKey) */
+  const [selectedComponentKey, setSelectedComponentKey] = useState<string | null>(null)
   const visibleNormalComponents = showNormalLabels ? normalComponents : []
   const visibleDefectDetections = showDefectLabels ? defectDetections : []
   const visibleMissing = showMissingLabels ? overlayMissing : []
@@ -564,6 +561,7 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
     setRefPixels({ w: DEFAULT_REF_WIDTH, h: DEFAULT_REF_HEIGHT })
     setImageZoom(1)
     setImagePan({ x: 0, y: 0 })
+    setSelectedComponentKey(null)
   }, [inspectionId, deskewSrc, rawSrc])
 
   /* 이미지가 로드되거나 창 크기가 변경되면 실제 크기 재측정 (보정 후 패널만) */
@@ -760,6 +758,7 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                             color={defectColor(d.defectType)}
                             scaleX={scaleX}
                             scaleY={scaleY}
+                            highlighted={defectKey(d) === selectedComponentKey}
                           />
                         ))}
                         {visibleDefectDetections.map((d, i) => (
@@ -898,6 +897,7 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                       color={defectColor(d.defectType)}
                       scaleX={1}
                       scaleY={1}
+                      highlighted={defectKey(d) === selectedComponentKey}
                     />
                   ))}
                   {visibleDefectDetections.map((d, i) => (
@@ -1049,41 +1049,35 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
               />
             </div>
 
-            {displayMissingReasons.length > 0 && (
+            {(defectDetections.length > 0 || displayMissingReasons.length > 0) && (
               <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2">
                 <h4 className="text-[11px] font-semibold text-red-800 mb-1">FAIL 원인</h4>
                 <ul className="space-y-1">
-                  {displayMissingReasons.map((d, i) => {
-                    const pos = missingPositionOf(d.defectType)
-                    const cx = Math.round(d.bboxX + d.bboxWidth / 2)
-                    const cy = Math.round(d.bboxY + d.bboxHeight / 2)
-                    return (
-                      <li key={`${d.defectType}-${i}`} className="text-[11px] font-medium text-red-800">
-                        <div>- {defectDisplayName(d.defectType)}</div>
-                        {pos && (
-                          <div className="mt-0.5 pl-2 font-mono text-red-700">
-                            정상 위치: ({Math.round(pos.x)}, {Math.round(pos.y)}) / bbox ({Math.round(d.bboxX)}, {Math.round(d.bboxY)}, {Math.round(d.bboxWidth)}x{Math.round(d.bboxHeight)})
-                          </div>
-                        )}
-                        {!pos && !isCountOnlyMissing(d.defectType) && (
-                          <div className="mt-0.5 pl-2 font-mono text-red-700">
-                            정상 위치: ({cx}, {cy})
-                          </div>
-                        )}
-                      </li>
-                    )
-                  })}
+                  {defectDetections.map((d, i) => (
+                    <li key={`defect-${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`} className="text-[11px] font-medium text-red-800">
+                      <div>
+                        - {defectDisplayName(d.defectType)}{' '}
+                        <span className="font-mono text-red-700">({(d.confidence * 100).toFixed(0)}%)</span>
+                      </div>
+                    </li>
+                  ))}
+                  {displayMissingReasons.map((d, i) => (
+                    <li key={`${d.defectType}-${i}`} className="text-[11px] font-medium text-red-800">
+                      <div>- {missingShortLabel(d.defectType)}</div>
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
 
-            {detectedComponents.length > 0 ? (
+            {normalComponents.length > 0 ? (
               <div className="border-t border-Black-10% pt-3 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
                 <h4 className="text-[11px] font-semibold text-Black-40% uppercase tracking-wider mb-2 shrink-0">
-                  검출 좌표
+                  정상 부품 좌표
+                  <span className="ml-1.5 normal-case font-normal text-Black-40%">— 클릭 시 이미지에서 강조</span>
                 </h4>
                 <div className="max-h-[60vh] lg:max-h-none lg:flex-1 overflow-y-auto space-y-2 pr-1">
-                  {detectedComponents.map((d, i) => {
+                  {normalComponents.map((d, i) => {
                     const cx = d.bboxX + Math.round(d.bboxWidth / 2)
                     const cy = d.bboxY + Math.round(d.bboxHeight / 2)
                     const color = defectColor(d.defectType)
@@ -1097,10 +1091,23 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                       log?.fiducial2X != null && log?.fiducial2Y != null
                         ? Math.hypot(cx - log.fiducial2X, cy - log.fiducial2Y)
                         : null
+                    const itemKey = defectKey(d)
+                    const isSelected = selectedComponentKey === itemKey
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={`${d.defectType}-${d.bboxX}-${d.bboxY}-${i}`}
-                        className="rounded-md border border-Black-10% bg-Background-1/80 px-2.5 py-2"
+                        onClick={() => {
+                          setSelectedComponentKey(isSelected ? null : itemKey)
+                          if (!isSelected && !showNormalLabels) setShowNormalLabels(true)
+                        }}
+                        aria-pressed={isSelected}
+                        className={[
+                          'block w-full text-left rounded-md border px-2.5 py-2 transition-colors',
+                          isSelected
+                            ? 'border-indigo-400 ring-2 ring-indigo-300 bg-indigo-50'
+                            : 'border-Black-10% bg-Background-1/80 hover:border-indigo-300 hover:bg-indigo-50/40',
+                        ].join(' ')}
                       >
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <span className="text-[11px] font-semibold truncate" style={{ color }}>
@@ -1122,14 +1129,14 @@ export default function DefectViewer({ inspectionId, onClose }: DefectViewerProp
                             </div>
                           )}
                         </div>
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
               </div>
             ) : (
               <div className="rounded-md border border-Black-10% bg-Background-1 px-3 py-4 text-xs text-Black-40% text-center">
-                표시할 검출 데이터가 없습니다.
+                표시할 정상 부품이 없습니다.
               </div>
             )}
 
