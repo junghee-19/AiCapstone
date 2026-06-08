@@ -57,9 +57,21 @@ function navClass(isActive: boolean) {
   )
 }
 
-export default function Sidebar() {
+interface SidebarProps {
+  /** true이면 사이드바를 접어 너비 0으로 숨긴다 */
+  collapsed?: boolean
+}
+
+export default function Sidebar({ collapsed = false }: SidebarProps) {
   return (
-    <aside className="w-52 h-full p-4 border-r border-Black-10% flex flex-col gap-2 shrink-0 bg-[#F9FAFB] shadow-[8px_0_24px_rgba(28,28,28,0.03)]">
+    <aside
+      className={clsx(
+        'h-full flex flex-col gap-2 shrink-0 bg-[#F9FAFB] overflow-hidden transition-all duration-300 ease-in-out',
+        collapsed
+          ? 'w-0 p-0 border-r-0 opacity-0'
+          : 'w-52 p-4 border-r border-Black-10% opacity-100 shadow-[8px_0_24px_rgba(28,28,28,0.03)]',
+      )}
+    >
 
       <div className="pb-3 flex flex-col gap-1">
         <div className="p-2 flex items-center gap-2">

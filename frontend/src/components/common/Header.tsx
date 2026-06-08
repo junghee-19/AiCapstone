@@ -22,7 +22,12 @@ const ROUTE_LABEL: Record<string, string> = {
   '/settings':        '설정',
 }
 
-export default function Header() {
+interface HeaderProps {
+  /** 사이드바 열림/닫힘을 토글한다 */
+  onToggleSidebar?: () => void
+}
+
+export default function Header({ onToggleSidebar }: HeaderProps) {
   const { isFetching, dataUpdatedAt } = useStats()
   const { pathname } = useLocation()
   const currentLabel = ROUTE_LABEL[pathname] ?? '대시보드'
@@ -37,7 +42,12 @@ export default function Header() {
       {/* 좌측: 사이드바 토글 + 즐겨찾기 + breadcrumb */}
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">
-          <button className="p-1 rounded-xl hover:bg-Black-4%" aria-label="사이드바">
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="p-1 rounded-xl hover:bg-Black-4%"
+            aria-label="사이드바 토글"
+          >
             <PanelLeft size={16} className="text-Black-100%" />
           </button>
           <button className="p-1 rounded-xl hover:bg-Black-4%" aria-label="즐겨찾기">
