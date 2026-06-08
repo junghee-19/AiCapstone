@@ -160,19 +160,23 @@ export default function InspectionTable({
   /* 클릭된 검사 ID — DefectViewer 모달에 전달 */
   const [selectedId, setSelectedId] = useState<number | undefined>()
 
-  /* ID 정렬 — 기본 내림차순 (최신 검사 우선) */
+  /* 정렬 방향 — 기본 내림차순 (서버 수신 시각 최신 우선) */
   const [idSort, setIdSort] = useState<'asc' | 'desc'>('desc')
 
   /* 페이지네이션 상태 — 페이지당 개수(10/20)와 현재 페이지(1-based) */
   const [pageSize, setPageSize] = useState<number>(10)
   const [page, setPage]         = useState<number>(1)
 
-  /* 결과 필터 + ID 정렬 적용 */
+  /* 결과 필터 + 서버 수신 시각(createdAt) 정렬 적용 (동일 시각이면 id 보조 정렬).
+     inspectedAt 은 엣지 기기 시계라 부정확할 수 있어, 실제 수신 순서를 기준으로 한다. */
   const sortedFiltered = useMemo(() => {
     const base = resultFilter
       ? logs.filter((l) => l.result === resultFilter)
       : logs
-    return [...base].sort((a, b) => idSort === 'asc' ? a.id - b.id : b.id - a.id)
+    return [...base].sort((a, b) => {
+      const cmp = a.createdAt.localeCompare(b.createdAt) || (a.id - b.id)
+      return idSort === 'asc' ? cmp : -cmp
+    })
   }, [logs, resultFilter, idSort])
 
   const filtered = sortedFiltered
@@ -198,8 +202,8 @@ export default function InspectionTable({
   }, [currentPage, totalPages])
 
   const HEADERS: { key: string; label: string; sortable?: boolean }[] = [
-    { key: 'id',         label: 'ID', sortable: true },
-    { key: 'time',       label: '시각' },
+    { key: 'id',         label: 'ID' },
+    { key: 'time',       label: '시각', sortable: true },
     { key: 'device',     label: '디바이스' },
     { key: 'result',     label: '결과' },
     { key: 'defects',    label: '결함' },
@@ -247,14 +251,14 @@ export default function InspectionTable({
                     h.sortable && 'cursor-pointer select-none hover:text-Black-80%',
                   )}
                   onClick={
-                    h.sortable && h.key === 'id'
+                    h.sortable && h.key === 'time'
                       ? () => setIdSort((p) => p === 'asc' ? 'desc' : 'asc')
                       : undefined
                   }
                 >
                   <span className="inline-flex items-center gap-1">
                     {h.label}
-                    {h.key === 'id' && (
+                    {h.key === 'time' && (
                       idSort === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />
                     )}
                   </span>
@@ -276,7 +280,8 @@ export default function InspectionTable({
               </tr>
             ) : (
               paged.map((log) => {
-                const { date, time } = formatDateTime(log.inspectedAt)
+                /* 표시 시각은 서버 수신 시각(createdAt) — 엣지 시계 오차로 미래 시각이 뜨는 것 방지 */
+                const { date, time } = formatDateTime(log.createdAt)
                 const isOpen = selectedId === log.id
                 const toggle = () => setSelectedId(isOpen ? undefined : log.id)
                 return (

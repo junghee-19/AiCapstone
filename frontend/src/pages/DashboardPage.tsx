@@ -10,19 +10,27 @@
  * │  (도넛 차트)         │  (스택 막대 차트)            │
  * ├─────────────────────┴────────────────────────────│
  * │  FailRateTrendChart (주별 불량률 라인)              │
- * │  InspectionTable    (최근 15건 실시간 피드)          │
+ * │  InspectionTable    (오늘 검사 이력 실시간 피드)      │
  * └──────────────────────────────────────────────────┘
  */
 
+import { useMemo } from 'react'
 import StatCardGroup from '@/components/dashboard/StatCard'
 import PassFailChart from '@/components/dashboard/PassFailChart'
 import TrendChart from '@/components/dashboard/TrendChart'
 import InspectionTable from '@/components/inspection/InspectionTable'
-import { useRecentInspections } from '@/hooks/useInspectionData'
+import { useAllInspections } from '@/hooks/useInspectionData'
 
 export default function DashboardPage() {
-  /* 최근 15건 — 대시보드 하단 실시간 피드 테이블 */
-  const { data: recentLogs = [], isLoading } = useRecentInspections(15)
+  /* 오늘(서버 수신일 기준) 검사 이력 — 대시보드 하단 실시간 피드 테이블 */
+  const { data: allLogs = [], isLoading } = useAllInspections()
+
+  const todayLogs = useMemo(() => {
+    /* 브라우저 로컬 기준 오늘 날짜 (YYYY-MM-DD) */
+    const todayStr = new Date().toLocaleDateString('en-CA')
+    /* createdAt(서버 수신 시각)은 엣지 시계 오차에 영향받지 않아 '오늘' 판정에 안정적 */
+    return allLogs.filter((l) => (l.createdAt ?? '').slice(0, 10) === todayStr)
+  }, [allLogs])
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-full">
@@ -53,10 +61,10 @@ export default function DashboardPage() {
       {/* 3행: 실시간 이력 테이블 */}
       <div className="rounded-xl border border-Black-10% bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-Black-100%">최근 검사 이력</h2>
-          <span className="text-xs text-Black-40%">최근 15건</span>
+          <h2 className="text-sm font-semibold text-Black-100%">오늘 검사 이력</h2>
+          <span className="text-xs text-Black-40%">오늘 {todayLogs.length}건</span>
         </div>
-        <InspectionTable logs={recentLogs} isLoading={isLoading} />
+        <InspectionTable logs={todayLogs} isLoading={isLoading} />
       </div>
     </div>
   )

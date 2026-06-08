@@ -1,7 +1,7 @@
 /**
  * 시간대별 검사 추이 차트 컴포넌트
  *
- * Recharts의 BarChart를 사용하여 최근 24시간 동안의 시간대별
+ * Recharts의 BarChart를 사용하여 오늘(서버 수신일 기준) 시간대별
  * PASS/FAIL 건수를 스택(누적) 막대 그래프로 시각화한다.
  *
  * 데이터는 useTrendData() 훅이 전체 이력에서 시간 단위로 집계하여 제공한다.
@@ -73,7 +73,7 @@ export default function TrendChart() {
   if (!trendData.length) {
     return (
       <div className="flex min-h-[23rem] items-center justify-center rounded-[20px] border border-Black-10% bg-white p-6">
-        <p className="text-sm text-Black-40%">최근 24시간 검사 데이터가 없습니다.</p>
+        <p className="text-sm text-Black-40%">오늘 검사 데이터가 없습니다.</p>
       </div>
     )
   }
