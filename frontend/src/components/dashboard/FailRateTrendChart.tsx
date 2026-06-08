@@ -275,17 +275,17 @@ export default function FailRateTrendChart() {
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="0" stroke="rgba(28, 28, 28, 0.1)" vertical={false} />
+            <CartesianGrid strokeDasharray="0" stroke="var(--chart-grid)" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: '#1C1C1C', fontSize: 11 }}
+              tick={{ fill: 'var(--chart-fg)', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               dy={6}
             />
             <YAxis
               domain={[0, 100]}
-              tick={{ fill: '#1C1C1C', fontSize: 11 }}
+              tick={{ fill: 'var(--chart-fg)', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               width={48}

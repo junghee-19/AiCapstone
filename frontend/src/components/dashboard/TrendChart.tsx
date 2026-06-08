@@ -131,18 +131,18 @@ export default function TrendChart() {
         >
           <CartesianGrid
             strokeDasharray="0"
-            stroke="rgba(28, 28, 28, 0.1)"
+            stroke="var(--chart-grid)"
             vertical={false}
           />
           <XAxis
             dataKey="label"
-            tick={{ fill: '#1C1C1C', fontSize: 11 }}
+            tick={{ fill: 'var(--chart-fg)', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             dy={8}
           />
           <YAxis
-            tick={{ fill: '#1C1C1C', fontSize: 11 }}
+            tick={{ fill: 'var(--chart-fg)', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             allowDecimals={false}
@@ -150,14 +150,14 @@ export default function TrendChart() {
           />
           <Tooltip
             content={<CustomTooltip />}
-            cursor={{ fill: 'rgba(28,28,28,0.04)' }}
+            cursor={{ fill: 'var(--chart-grid)' }}
           />
           <Legend
             verticalAlign="top"
             align="right"
             height={0}
             formatter={(value) => (
-              <span style={{ color: '#1C1C1C', fontSize: '0.75rem' }}>{value}</span>
+              <span style={{ color: 'var(--chart-fg)', fontSize: '0.75rem' }}>{value}</span>
             )}
           />
           {mode !== 'fail' && (

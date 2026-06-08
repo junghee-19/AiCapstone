@@ -22,8 +22,8 @@ import SettingsPage from '@/pages/SettingsPage'
 import { useTheme } from '@/hooks/useTheme'
 
 export default function App() {
-  /* 라이트/다크 테마를 전체 화면에 한 번 적용 */
-  useTheme()
+  /* 라이트/다크 테마 (헤더의 테마 버튼으로 토글) */
+  const { theme, toggleTheme } = useTheme()
 
   /* 사이드바 열림/닫힘 상태 (헤더의 토글 버튼으로 제어) */
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -34,7 +34,11 @@ export default function App() {
       <Sidebar collapsed={!sidebarOpen} />
 
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Header onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
+        <Header
+          onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
         <main className="flex-1 overflow-y-auto bg-[#F4F6F8]">
           <Routes>
             <Route path="/"                element={<DashboardPage />} />
