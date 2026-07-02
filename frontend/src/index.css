@@ -13,36 +13,61 @@
 * { transition-property: background-color, border-color, color;
     transition-duration: 150ms; }
 
-/* ── 라이트 모드 오버라이드 ────────────────────────────────────────────────
-   body.theme-light 클래스가 붙으면 다크 톤 Tailwind 색상을 라이트로 덮어쓴다.
-   PASS/FAIL/경고(green/red/yellow) 등 의미 색상은 의도적으로 제외. */
+/* ── 다크 모드 오버라이드 ──────────────────────────────────────────────────
+   앱은 SnowUI 라이트 토큰(bg-white, text-Black-*, bg-[#F4F6F8], Color-* 등)을
+   하드코딩해 사용한다. body.theme-dark 가 붙으면 그 토큰들을 다크 톤으로 덮어쓴다.
+   PASS/FAIL·경고(green/red/yellow) 등 의미 색상은 의도적으로 제외. */
 
-body.theme-light                         { background-color: #f3f4f6 !important;
-                                           color: #1f2937 !important; }
+body.theme-dark { background-color: #0e1014 !important; color: #e8e8ea !important; }
 
-body.theme-light .bg-gray-950            { background-color: #f3f4f6 !important; }
-body.theme-light .bg-gray-900            { background-color: #ffffff !important; }
-body.theme-light .bg-gray-900\/60        { background-color: #ffffff !important; }
-body.theme-light .bg-gray-800            { background-color: #e5e7eb !important; }
-body.theme-light .bg-gray-800\/60        { background-color: #f3f4f6 !important; }
-body.theme-light .hover\:bg-gray-800:hover { background-color: #e5e7eb !important; }
-body.theme-light .hover\:bg-gray-700:hover { background-color: #d1d5db !important; }
+/* 차트(Recharts) 인라인 SVG 색상용 변수 — 클래스 오버라이드가 닿지 않는 곳에 사용.
+   라이트 기본값 → 다크에서 밝은 톤으로 자동 전환. */
+:root          { --chart-fg: #1C1C1C; --chart-fg-muted: rgba(28, 28, 28, 0.4);
+                 --chart-grid: rgba(28, 28, 28, 0.08); }
+body.theme-dark { --chart-fg: #e8e8ea; --chart-fg-muted: rgba(232, 232, 234, 0.52);
+                 --chart-grid: rgba(255, 255, 255, 0.10); }
 
-body.theme-light .text-white             { color: #111827 !important; }
-body.theme-light .text-gray-100          { color: #1f2937 !important; }
-body.theme-light .text-gray-200          { color: #1f2937 !important; }
-body.theme-light .text-gray-300          { color: #374151 !important; }
-body.theme-light .text-gray-400          { color: #4b5563 !important; }
-body.theme-light .text-gray-500          { color: #6b7280 !important; }
-body.theme-light .text-gray-600          { color: #6b7280 !important; }
-body.theme-light .hover\:text-white:hover { color: #111827 !important; }
+/* ── 표면(배경) ─────────────────────────────────────────────────────────── */
+body.theme-dark .bg-\[\#F4F6F8\]   { background-color: #0e1014 !important; }
+body.theme-dark .bg-\[\#F9FAFB\]   { background-color: #14171c !important; }
 
-body.theme-light .border-gray-700        { border-color: #d1d5db !important; }
-body.theme-light .border-gray-800        { border-color: #e5e7eb !important; }
-body.theme-light .divide-gray-800\/60 > :not([hidden]) ~ :not([hidden])
-                                         { border-color: #e5e7eb !important; }
+body.theme-dark .bg-white,
+body.theme-dark .bg-Background-1,
+body.theme-dark .bg-white\/95,
+body.theme-dark .bg-white\/90,
+body.theme-dark .bg-white\/80,
+body.theme-dark .bg-white\/70   { background-color: #1a1d23 !important; }
 
-/* 라이트 모드용 스크롤바 */
-body.theme-light::-webkit-scrollbar-track  { background: #e5e7eb; }
-body.theme-light::-webkit-scrollbar-thumb  { background: #9ca3af; }
-body.theme-light::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+/* 검정 알파 표면 → 흰 알파로 반전 */
+body.theme-dark .bg-Black-4\%   { background-color: rgba(255, 255, 255, 0.06) !important; }
+body.theme-dark .bg-Black-10\%  { background-color: rgba(255, 255, 255, 0.10) !important; }
+
+/* 파스텔 카드 → 어둡게 틴트 */
+body.theme-dark .bg-\[\#E5ECF6\], body.theme-dark .bg-Color-1 { background-color: #1b2433 !important; }
+body.theme-dark .bg-\[\#E3F5FF\] { background-color: #152630 !important; }
+body.theme-dark .bg-\[\#FFF4E5\] { background-color: #2a2113 !important; }
+body.theme-dark .bg-\[\#F0F9E8\] { background-color: #1a2615 !important; }
+
+/* ── 텍스트 ─────────────────────────────────────────────────────────────── */
+body.theme-dark .text-Black-100\% { color: #e8e8ea !important; }
+body.theme-dark .text-Black-80\%  { color: rgba(232, 232, 234, 0.80) !important; }
+body.theme-dark .text-Black-60\%  { color: rgba(232, 232, 234, 0.62) !important; }
+body.theme-dark .text-Black-40\%  { color: rgba(232, 232, 234, 0.52) !important; }
+body.theme-dark .text-Black-20\%  { color: rgba(232, 232, 234, 0.38) !important; }
+body.theme-dark .text-Black-10\%  { color: rgba(232, 232, 234, 0.26) !important; }
+body.theme-dark .text-black       { color: #e8e8ea !important; }
+
+/* ── 테두리 ─────────────────────────────────────────────────────────────── */
+body.theme-dark .border-Black-10\% { border-color: rgba(255, 255, 255, 0.12) !important; }
+body.theme-dark .border-Black-20\% { border-color: rgba(255, 255, 255, 0.22) !important; }
+
+/* ── hover 상태 ─────────────────────────────────────────────────────────── */
+body.theme-dark .hover\:bg-Black-4\%:hover  { background-color: rgba(255, 255, 255, 0.06) !important; }
+body.theme-dark .hover\:bg-Black-10\%:hover { background-color: rgba(255, 255, 255, 0.10) !important; }
+body.theme-dark .hover\:bg-white:hover      { background-color: #23272f !important; }
+body.theme-dark .hover\:bg-Color-1:hover    { background-color: #1b2433 !important; }
+
+/* 다크 모드용 스크롤바 */
+body.theme-dark::-webkit-scrollbar-track  { background: #14171c; }
+body.theme-dark::-webkit-scrollbar-thumb  { background: rgba(255, 255, 255, 0.18); }
+body.theme-dark::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.32); }

@@ -121,8 +121,8 @@ export function useInspectionsByPeriod(from: string, to: string) {
 /**
  * 전체 이력 데이터를 시간대별로 집계하여 TrendChart용 데이터를 반환한다.
  *
- * 집계 방식: inspectedAt의 시(hour) 단위로 그룹핑하여
- * 각 시간대의 PASS/FAIL 건수를 카운트한다.
+ * 집계 방식: 오늘(서버 수신일 기준) 검사를 createdAt의 시(hour) 단위로
+ * 그룹핑하여 각 시간대의 PASS/FAIL 건수를 카운트한다.
  *
  * 예시 반환값:
  *   [{ label: "09:00", pass: 12, fail: 2 }, ...]
@@ -134,15 +134,15 @@ export function useTrendData(): { data: TrendDataPoint[]; isLoading: boolean } {
     return { data: [], isLoading }
   }
 
-  // 최근 24시간 데이터만 필터링
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
-  const recent = logs.filter((l) => new Date(l.inspectedAt) >= cutoff)
+  // 오늘(브라우저 로컬 기준) 검사만 필터링 — createdAt(서버 수신 시각)은 엣지 시계 오차에 영향 없음
+  const todayStr = new Date().toLocaleDateString('en-CA')
+  const todayLogs = logs.filter((l) => (l.createdAt ?? '').slice(0, 10) === todayStr)
 
   // 시간(HH:00) 단위로 그룹핑
   const grouped: Record<string, { pass: number; fail: number }> = {}
 
-  recent.forEach((log) => {
-    const d = new Date(log.inspectedAt)
+  todayLogs.forEach((log) => {
+    const d = new Date(log.createdAt)
     // "HH:00" 형식 레이블 생성
     const label = `${String(d.getHours()).padStart(2, '0')}:00`
 

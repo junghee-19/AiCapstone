@@ -34,7 +34,7 @@ function CenterLabel({
         x={cx} y={cy - 8}
         textAnchor="middle"
         dominantBaseline="central"
-        style={{ fontSize: '1.5rem', fontWeight: 700, fill: '#1C1C1C' }}
+        style={{ fontSize: '1.5rem', fontWeight: 700, fill: 'var(--chart-fg)' }}
       >
         {failRate.toFixed(1)}%
       </text>
@@ -42,7 +42,7 @@ function CenterLabel({
       <text
         x={cx} y={cy + 18}
         textAnchor="middle"
-        style={{ fontSize: '0.75rem', fill: 'rgba(28, 28, 28, 0.4)' }}
+        style={{ fontSize: '0.75rem', fill: 'var(--chart-fg-muted)' }}
       >
         불량률
       </text>
@@ -126,7 +126,7 @@ export default function PassFailChart() {
             iconType="circle"
             wrapperStyle={{ paddingTop: '6px' }}
             formatter={(value) => (
-              <span style={{ color: '#1C1C1C', fontSize: '0.75rem' }}>{value}</span>
+              <span style={{ color: 'var(--chart-fg)', fontSize: '0.75rem' }}>{value}</span>
             )}
           />
         </PieChart>

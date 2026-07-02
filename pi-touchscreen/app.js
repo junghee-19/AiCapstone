@@ -283,7 +283,7 @@
     body.dataset.result = result
     resultHeader.dataset.result = result
     resultText.textContent = result
-    startResultCountdown()
+    startResultCountdown(result)
 
     const defects = state.defects || []
     const fiducials = state.fiducials || []
@@ -302,8 +302,21 @@
     }
   }
 
-  function startResultCountdown() {
+  function startResultCountdown(result) {
     clearResultCountdown()
+
+    // FAIL 결과는 자동으로 넘어가지 않고, 터치해야 라이브 화면으로 복귀한다.
+    if (result === 'FAIL') {
+      if (resultCountdown) resultCountdown.style.display = 'grid'
+      if (resultCountdownText) {
+        resultCountdownText.textContent = '화면을 터치하면 라이브 화면으로 돌아갑니다'
+      }
+      if (resultCountdownFill) {
+        resultCountdownFill.style.transform = 'scaleX(1)'
+      }
+      return
+    }
+
     const totalMs = Math.max(1000, resultDisplaySeconds * 1000)
     const startedAt = Date.now()
 
